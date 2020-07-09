@@ -1,0 +1,25 @@
+#!/bin/bash
+while [ ! -p {{PIPEOUT}}$1 ]
+do
+  sleep 0.1
+done
+
+for (( ; ;))
+do
+	if [ ! -p {{PIPEOUT}}$1 ]
+	then
+		exit 1
+	fi
+	
+	var1=$(timeout -s 9 0.1 cat {{PIPEOUT}}$1)
+	if [[ "$var1" == *"\\EOS" ]]
+	then
+		echo -e "\e[32m$0 $1: terminated\e[39m"
+		exit 0
+	fi
+	
+	if [ "$var1" != "" ]
+	then
+		echo -e "[$1] $var1"
+	fi
+done

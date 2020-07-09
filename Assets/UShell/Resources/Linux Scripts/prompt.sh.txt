@@ -1,0 +1,19 @@
+#!/bin/bash
+#!/bin/bash
+while [ ! -p {{PIPEIN}}$1 ]
+do
+  sleep 0.1
+done
+
+for (( ; ;))
+do
+	read var1
+	echo "$var1" > {{PIPEIN}}$1
+	if [ "$var1" == "clear" ]
+	then
+		clear
+	elif [ "$var1" == "quit" ]
+	then
+		exit 0
+	fi
+done

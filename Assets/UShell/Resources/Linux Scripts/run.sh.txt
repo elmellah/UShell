@@ -1,0 +1,55 @@
+#!/bin/bash
+log='n'
+prompt='n'
+server='n'
+client='n'
+while getopts ":lpsc" opt; do
+	case ${opt} in
+	l )
+		log='y'
+		;;
+	p )
+		prompt='y'
+		;;
+	s )
+		server='y'
+		;;
+	c )
+		client='y'
+		;;
+	\? )
+		echo "Usage: cmd [-l] [-p] [-s] [-c]"
+		exit 1
+		;;
+	esac
+done
+
+if [ "$server" == "y" ] && [ "$client" == "y" ]
+then
+	echo "run: must run as a server OR a client"
+	exit 2
+fi
+
+shift $((OPTIND -1))
+
+if [ "$server" == "y" ]
+then
+	chmod u+x {{EXENAME}} && ./{{EXENAME}} -batchmode -nographics -logfile ~/.logs/output$2.log -cmd ":open out;:open in;start $1" -shid $2 &
+	shid=$2
+elif [ "$client" == "y" ]
+then
+	chmod u+x {{EXENAME}} && ./{{EXENAME}} -batchmode -nographics -logfile ~/.logs/output$3.log -cmd ":open out;:open in;connect $1 $2" -shid $3 &
+	shid=$3
+else
+	chmod u+x {{EXENAME}} && ./{{EXENAME}} -batchmode -nographics -logfile ~/.logs/output$1.log -cmd ":open out;:open in;" -shid $1 &
+	shid=$1
+fi
+	
+if [ "$log" == "y" ]
+then
+	bash log.sh $shid &
+fi
+if [ "$prompt" == "y" ]
+then
+	bash prompt.sh $shid
+fi
