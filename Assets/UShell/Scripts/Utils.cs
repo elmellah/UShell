@@ -569,7 +569,7 @@ namespace UShell
                         if (input[j] == '\n' || input[j] == '\r')
                         {
                             i = j - 1;
-                            tokenStartPosition = i;
+                            tokenStartPosition = j;
                             break;
                         }
                         if (j == input.Length - 1)
