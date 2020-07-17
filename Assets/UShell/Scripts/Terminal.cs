@@ -65,13 +65,12 @@ namespace UShell.Consoles
         #region MESSAGES
         void Awake()
         {
-            //ColorUtility.ToHtmlStringRGB
-
             _strBuilder = new StringBuilder();
-            _strColorAssert = string.Concat(_assertColor.r.ToString("x2"), _assertColor.g.ToString("x2"), _assertColor.b.ToString("x2"), _assertColor.a.ToString("x2"));
-            _strColorError = string.Concat(_errorColor.r.ToString("x2"), _errorColor.g.ToString("x2"), _errorColor.b.ToString("x2"), _errorColor.a.ToString("x2"));
-            _strColorException = string.Concat(_exceptionColor.r.ToString("x2"), _exceptionColor.g.ToString("x2"), _exceptionColor.b.ToString("x2"), _exceptionColor.a.ToString("x2"));
-            _strColorWarning = string.Concat(_warningColor.r.ToString("x2"), _warningColor.g.ToString("x2"), _warningColor.b.ToString("x2"), _warningColor.a.ToString("x2"));
+
+            _strColorAssert = ColorUtility.ToHtmlStringRGBA(_assertColor);
+            _strColorError = ColorUtility.ToHtmlStringRGBA(_errorColor);
+            _strColorException = ColorUtility.ToHtmlStringRGBA(_exceptionColor);
+            _strColorWarning = ColorUtility.ToHtmlStringRGBA(_warningColor);
 
             _text.color = _logColor;
 
