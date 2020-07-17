@@ -110,7 +110,7 @@ namespace UShell.Commands
                         "-s key [value]"
                     };
                 case "lds":
-                    return new string[] { "build-index" };
+                    return new string[] { "build-index|scene-name" };
                 case "screenshot":
                     return new string[] {
                         "[filename [supersize]]",
@@ -145,6 +145,32 @@ namespace UShell.Commands
                     return new string[] { "[frequency]" };
                 case "quit":
                     return new string[] { "[exitcode]" };
+                case "auth":
+                    return new string[] {
+                        "[-mw]",
+                        "",
+                        "-m",
+                        "-w"
+                    };
+                case "time":
+                    return new string[] {
+                        "[-f fixed-delta-time] [-m maximum-delta-time] [-s time-scale] [-p maximum-particle-delta-time]",
+                        "",
+                        "-f fixedDeltaTime",
+                        "-m maximumDeltaTime",
+                        "-s timeScale",
+                        "-p maximumParticleDeltaTime",
+                    };
+                case "cursor":
+                    return new string[] {
+                        "[-hslcn]",
+                        "",
+                        "-h",
+                        "-s",
+                        "-l",
+                        "-c",
+                        "-n"
+                    };
             }
             return new string[0];
         }
@@ -212,11 +238,28 @@ namespace UShell.Commands
                 case "webcam":
                     return new string[] { "log informations about the user webcams" };
                 case "auth":
-                    return new string[] { "handle permission to use the webcam or microphone on some platform" };
+                    return new string[]
+                    {
+                        "handle webcam and microphone permissions on some platforms",
+                        "log permissions",
+                        "ask the user the permission to use the microphone",
+                        "ask the user the permission to use the webcam"
+                    };
                 case "time":
-                    return new string[] { "handle Unity times" };
+                    return new string[] {
+                        "handle Unity times",
+                        "log Unity times",
+                    };
                 case "cursor":
-                    return new string[] { "handle cursor visibility and lock state" };
+                    return new string[] {
+                        "handle cursor visibility and lock state",
+                        "log cursor states",
+                        "hide the cursor",
+                        "show the cursor",
+                        "lock the cursor to the center of the screen",
+                        "confine the cursor inside the game window",
+                        "free the cursor"
+                    };
                 case "tier":
                     return new string[] { "log the current graphic tier" };
             }
@@ -660,13 +703,45 @@ namespace UShell.Commands
                     "maximum particle delta time    " + Time.maximumParticleDeltaTime + "\n"
                 );
             }
+            else if (args.Length == 1)
+            {
+                switch (args[0])
+                {
+                    case "-f":
+                        Debug.Log(Time.fixedDeltaTime);
+                        break;
+                    case "-m":
+                        Debug.Log(Time.maximumDeltaTime);
+                        break;
+                    case "-s":
+                        Debug.Log(Time.timeScale);
+                        break;
+                    case "-p":
+                        Debug.Log(Time.maximumParticleDeltaTime);
+                        break;
+                    default:
+                        return false;
+                }
+            }
             else if (args.Length == 2)
             {
                 switch (args[0])
                 {
+                    case "-f":
+                        float fixedDeltaTime = Utils.FloatParse(args[1]);
+                        Time.fixedDeltaTime = fixedDeltaTime;
+                        break;
+                    case "-m":
+                        float maximumDeltaTime = Utils.FloatParse(args[1]);
+                        Time.maximumDeltaTime = maximumDeltaTime;
+                        break;
                     case "-s":
-                        float timescale = Utils.FloatParse(args[1]);
-                        Time.timeScale = timescale;
+                        float timeScale = Utils.FloatParse(args[1]);
+                        Time.timeScale = timeScale;
+                        break;
+                    case "-p":
+                        float maximumParticleDeltaTime = Utils.FloatParse(args[1]);
+                        Time.maximumParticleDeltaTime = maximumParticleDeltaTime;
                         break;
                     default:
                         return false;
