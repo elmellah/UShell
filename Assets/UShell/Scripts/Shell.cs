@@ -49,8 +49,13 @@ namespace UShell
         [Convar("converters", "the shell converters", true)]
         private static Tuple<Type, Type>[] _converters = new Tuple<Type, Type>[]
         {
+            new Tuple<Type, Type>(typeof(Vector2), typeof(Converters.Vector2Converter)),
             new Tuple<Type, Type>(typeof(Vector3), typeof(Converters.Vector3Converter)),
+            new Tuple<Type, Type>(typeof(Vector4), typeof(Converters.Vector4Converter)),
             new Tuple<Type, Type>(typeof(Quaternion), typeof(Converters.QuaternionConverter)),
+            new Tuple<Type, Type>(typeof(Color), typeof(Converters.ColorConverter)),
+            new Tuple<Type, Type>(typeof(Color32), typeof(Converters.Color32Converter)),
+            new Tuple<Type, Type>(typeof(Rect), typeof(Converters.RectConverter)),
         };
         private static Type[] _excludedTypes = new Type[]
         {

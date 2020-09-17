@@ -199,19 +199,58 @@ namespace UShell
                 throw new InvalidOperationException(cannotConvert);
         }
 
+        public static bool TryParseVector2(string s, NumberStyles style, IFormatProvider provider, out Vector2 result)
+        {
+            string[] scalars = s.Split(',');
+            if (scalars.Length == 2)
+            {
+                if (float.TryParse(scalars[0], style, provider, out float scalar0) &&
+                float.TryParse(scalars[1], style, provider, out float scalar1)
+                )
+                {
+                    result = new Vector2(scalar0, scalar1);
+                    return true;
+                }
+            }
+
+            result = Vector2.zero;
+            return false;
+        }
         public static bool TryParseVector3(string s, NumberStyles style, IFormatProvider provider, out Vector3 result)
         {
             string[] scalars = s.Split(',');
-            if (float.TryParse(scalars[0], style, provider, out float scalar0) &&
+            if (scalars.Length == 3)
+            {
+                if (float.TryParse(scalars[0], style, provider, out float scalar0) &&
                 float.TryParse(scalars[1], style, provider, out float scalar1) &&
                 float.TryParse(scalars[2], style, provider, out float scalar2)
-            )
-            {
-                result = new Vector3(scalar0, scalar1, scalar2);
-                return true;
+                )
+                {
+                    result = new Vector3(scalar0, scalar1, scalar2);
+                    return true;
+                }
             }
 
             result = Vector3.zero;
+            return false;
+        }
+        public static bool TryParseVector4(string s, NumberStyles style, IFormatProvider provider, out Vector4 result)
+        {
+            string[] scalars = s.Split(',');
+            if (scalars.Length == 4)
+            {
+                if (float.TryParse(scalars[0], style, provider, out float scalar0) &&
+                float.TryParse(scalars[1], style, provider, out float scalar1) &&
+                float.TryParse(scalars[2], style, provider, out float scalar2) &&
+                float.TryParse(scalars[3], style, provider, out float scalar3)
+                )
+                {
+                    result = new Vector4(scalar0, scalar1, scalar2, scalar3);
+                    return true;
+                }
+            }
+
+            result = Vector4.zero;
             return false;
         }
         public static bool TryParseQuaternion(string s, NumberStyles style, IFormatProvider provider, out Quaternion result)
@@ -244,7 +283,78 @@ namespace UShell
             result = Quaternion.identity;
             return false;
         }
+        public static bool TryParseColor(string s, NumberStyles style, IFormatProvider provider, out Color result)
+        {
+            float scalar0, scalar1, scalar2, scalar3;
+            string[] scalars = s.Split(',');
 
+            if (scalars.Length == 3)
+            {
+                if (float.TryParse(scalars[0], style, provider, out scalar0) &&
+                float.TryParse(scalars[1], style, provider, out scalar1) &&
+                float.TryParse(scalars[2], style, provider, out scalar2)
+                )
+                {
+                    result = new Color(scalar0, scalar1, scalar2);
+                    return true;
+                }
+            }
+            else if (scalars.Length == 4)
+            {
+                if (float.TryParse(scalars[0], style, provider, out scalar0) &&
+                float.TryParse(scalars[1], style, provider, out scalar1) &&
+                float.TryParse(scalars[2], style, provider, out scalar2) &&
+                float.TryParse(scalars[3], style, provider, out scalar3)
+                )
+                {
+                    result = new Color(scalar0, scalar1, scalar2, scalar3);
+                    return true;
+                }
+            }
+
+            result = Color.clear;
+            return false;
+        }
+        public static bool TryParseColor32(string s, NumberStyles style, IFormatProvider provider, out Color32 result)
+        {
+            byte scalar0, scalar1, scalar2, scalar3;
+            string[] scalars = s.Split(',');
+            
+            if (scalars.Length == 4)
+            {
+                if (byte.TryParse(scalars[0], style, provider, out scalar0) &&
+                byte.TryParse(scalars[1], style, provider, out scalar1) &&
+                byte.TryParse(scalars[2], style, provider, out scalar2) &&
+                byte.TryParse(scalars[3], style, provider, out scalar3)
+                )
+                {
+                    result = new Color32(scalar0, scalar1, scalar2, scalar3);
+                    return true;
+                }
+            }
+
+            result = new Color32();
+            return false;
+        }
+        public static bool TryParseRect(string s, NumberStyles style, IFormatProvider provider, out Rect result)
+        {
+            string[] scalars = s.Split(',');
+            if (scalars.Length == 4)
+            {
+                if (float.TryParse(scalars[0], style, provider, out float scalar0) &&
+                float.TryParse(scalars[1], style, provider, out float scalar1) &&
+                float.TryParse(scalars[2], style, provider, out float scalar2) &&
+                float.TryParse(scalars[3], style, provider, out float scalar3)
+                )
+                {
+                    result = new Rect(scalar0, scalar1, scalar2, scalar3);
+                    return true;
+                }
+            }
+
+            result = Rect.zero;
+            return false;
+        }
 
 
         public static TEnum EnumParse<TEnum>(string value, bool ignoreCase) where TEnum : struct
@@ -254,13 +364,42 @@ namespace UShell
             else
                 throw new FormatException(string.Format(parseError, value, typeof(TEnum).Name));
         }
-        //sbyte short long    byte ushort uint ulong    double    Decimal     char
+
         public static bool BoolParse(string value)
         {
             if (bool.TryParse(value, out bool result))
                 return result;
             else
                 throw new FormatException(string.Format(parseError, value, typeof(bool).Name));
+        }
+        public static char CharParse(string value)
+        {
+            if (char.TryParse(value, out char result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(char).Name));
+        }
+        public static decimal DecimalParse(string value)
+        {
+            if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(decimal).Name));
+        }
+
+        public static sbyte SByteParse(string value)
+        {
+            if (sbyte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out sbyte result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(sbyte).Name));
+        }
+        public static short ShortParse(string value)
+        {
+            if (short.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out short result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(short).Name));
         }
         public static int IntParse(string value)
         {
@@ -269,6 +408,43 @@ namespace UShell
             else
                 throw new FormatException(string.Format(parseError, value, typeof(int).Name));
         }
+        public static long LongParse(string value)
+        {
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(long).Name));
+        }
+
+        public static byte ByteParse(string value)
+        {
+            if (byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out byte result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(byte).Name));
+        }
+        public static ushort UShortParse(string value)
+        {
+            if (ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ushort result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(ushort).Name));
+        }
+        public static uint UIntParse(string value)
+        {
+            if (uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(uint).Name));
+        }
+        public static ulong ULongParse(string value)
+        {
+            if (ulong.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(ulong).Name));
+        }
+
         public static float FloatParse(string value)
         {
             if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result))
@@ -276,11 +452,13 @@ namespace UShell
             else
                 throw new FormatException(string.Format(parseError, value, typeof(float).Name));
         }
-
-
-
-
-
+        public static double DoubleParse(string value)
+        {
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                return result;
+            else
+                throw new FormatException(string.Format(parseError, value, typeof(double).Name));
+        }
         #endregion
 
         #region FUZZY SEARCH
