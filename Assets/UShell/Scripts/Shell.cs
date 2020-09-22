@@ -1545,12 +1545,8 @@ namespace UShell
         {
             foreach (KeyValuePair<string, List<MethodInfo>> methodList in methods)
             {
-                foreach (MethodInfo method in methodList.Value)
-                {
-                    strBuilder.Append("\n\t- ");
-                    strBuilder.Append(methodList.Key);
-                    break;
-                }
+                strBuilder.Append("\n\t- ");
+                strBuilder.Append(methodList.Key);
             }
         }
         private void getHelpFromLabel(StringBuilder strBuilder, ICommand cmd, string label)
@@ -1587,7 +1583,7 @@ namespace UShell
 
                 ParameterInfo[] parameterInfos = method.GetParameters();
                 for (int i = 0; i < parameterInfos.Length; i++)
-                    strBuilder.Append(" " + parameterInfos[i].ParameterType.Name.ToLowerInvariant());
+                    strBuilder.Append(" " + parameterInfos[i].Name);
 
                 string info = method.GetCustomAttribute<Cmd>().Info;
                 if (!string.IsNullOrEmpty(info))
