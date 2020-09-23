@@ -789,6 +789,64 @@ namespace UShell
 
             return tokens;
         }
+        public static void ExpandTokens(List<Token> tokens, Func<string, string> getParameterValue)
+        {
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                if (tokens[i].type == Token.Type.WORD)
+                    tokens[i] = new Token(Token.Type.WORD, Utils.ExpandWord(tokens[i].value, getParameterValue));
+            }
+        }
+        public static string ExpandWord(string word, Func<string, string> getParameterValue)
+        {
+            bool dQ = false; //isDoubleQuoting ('"')
+            bool sQ = false; //isSingleQuoting ('\'')
+            bool esc = false; //isEscaping ('\\')
+            bool isParam = false;
+            int index = 0;
+            string value = "";
+
+            for (int i = 0; i < word.Length; i++)
+            {
+                if ((word[i] == '\\' && !esc && !sQ) || (word[i] == '\'' && !esc && !dQ) || (word[i] == '"' && !esc && !sQ))
+                {
+                    if (word[i] == '\\')
+                        esc = true;
+                    else if (word[i] == '\'')
+                        sQ = !sQ;
+                    else if (word[i] == '"')
+                        dQ = !dQ;
+
+                    if (isParam)
+                        value += getParameterValue(word.Substring(index, i - index));
+                    else
+                        value += word.Substring(index, i - index);
+
+                    index = i;
+                    isParam = false;
+                }
+                else if (!esc && !sQ && word[i] == '$')
+                {
+                    if (isParam)
+                        value += getParameterValue(word.Substring(index, i - index));
+                    else
+                        value += word.Substring(index, i - index);
+
+                    index = i + 1;
+                    isParam = true;
+                }
+            }
+
+            if (word.Length != index)
+            {
+                if (isParam)
+                    value += getParameterValue(word.Substring(index, word.Length - index));
+                else
+                    value += word.Substring(index, word.Length - index);
+            }
+
+            return value;
+        }
         /// <summary>
         /// 
         /// </summary>

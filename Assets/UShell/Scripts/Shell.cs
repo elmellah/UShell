@@ -604,6 +604,8 @@ namespace UShell
             cmdLine = Utils.RemoveEscapedSeparators(cmdLine, new char[] { '\n', '\r' });
             try {
                 tokens = Utils.Tokenize(cmdLine, operators);
+                Utils.ExpandTokens(tokens, getConvarValue);
+                tokens.RemoveAll(token => string.IsNullOrEmpty(token.value));
                 Utils.Parse(tokens);
             } catch (Exception e) {
                 Debug.LogWarning("shell: " + e.Message);
@@ -939,12 +941,12 @@ namespace UShell
         }
         private void registerConvar(ConvarCmd convarCmd)
         {
-            string label = "$" + convarCmd.Name;
+            string label = convarCmd.Name;
             if (!_convars.ContainsKey(label))
                 _convars.Add(label, convarCmd);
             else
             {
-                label = "$" + convarCmd.DeclaringType + "." + convarCmd.Name;
+                label = convarCmd.DeclaringType + "." + convarCmd.Name;
                 if (!_convars.ContainsKey(label))
                     _convars.Add(label, convarCmd);
             }
@@ -971,6 +973,35 @@ namespace UShell
 
                 _methods[label].Add(methodInfo);
             }
+        }
+
+        private string getConvarValue(string parameter)
+        {
+            if (_convars.TryGetValue(parameter, out ConvarCmd convarCmd))
+            {
+                List<object> instances;
+                if (convarCmd.IsStatic)
+                {
+                    instances = new List<object>();
+                    instances.Add(null);
+                }
+                else if (!_instances.TryGetValue(convarCmd.DeclaringType, out instances))
+                {
+                    return "";
+                }
+
+                if (convarCmd.CanRead)
+                {
+                    try
+                    {
+                        if (instances.Count > 0)
+                            return convarCmd.GetValue(instances[0]).ToString();
+                    }
+                    catch (Exception) {}
+                }
+            }
+
+            return "";
         }
 
         private void handleLog(string strLog, string stackTrace, LogType type)
