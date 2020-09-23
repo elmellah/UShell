@@ -41,6 +41,10 @@ namespace UShell
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(value);
             return hashCode;
         }
+        public override string ToString()
+        {
+            return type + ":" + value;
+        }
     }
 
     public static class Utils
