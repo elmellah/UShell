@@ -847,6 +847,38 @@ namespace UShell
 
             return value;
         }
+        public static int ResolveAssignment(List<Token> tokens, Action<string, string> setParameterValue)
+        {
+            int i = 0;
+            for (; i < tokens.Count; i++)
+            {
+                if (!ResolveAssignment(tokens[i].value, setParameterValue))
+                    break;
+            }
+
+            return i;
+        }
+        public static bool ResolveAssignment(string word, Action<string, string> setParameterValue)
+        {
+            for (int i = 0; i < word.Length; i++)
+            {
+                if (word[i] == '=')
+                {
+                    string name = word.Substring(0, i);
+                    string unquotedName = RemoveQuoting(name);
+                    if (unquotedName == name)
+                    {
+                        string value = word.Substring(i + 1, word.Length - (i + 1));
+                        setParameterValue(name, RemoveQuoting(value));
+                        return true;
+                    }
+
+                    break;
+                }
+            }
+
+            return false;
+        }
         /// <summary>
         /// 
         /// </summary>

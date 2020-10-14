@@ -106,6 +106,7 @@ namespace UShell
         private Dictionary<string, ConvarCmd> _convars = new Dictionary<string, ConvarCmd>();
         private Dictionary<string, List<MethodInfo>> _methods = new Dictionary<string, List<MethodInfo>>();
         private Dictionary<Type, List<object>> _instances = new Dictionary<Type, List<object>>();
+        private Dictionary<string, string> _variables = new Dictionary<string, string>();
 
         [Convar("headless", "is the current process running in batchmode?", true)]
         private bool _isHeadless = false;
@@ -604,7 +605,7 @@ namespace UShell
             cmdLine = Utils.RemoveEscapedSeparators(cmdLine, new char[] { '\n', '\r' });
             try {
                 tokens = Utils.Tokenize(cmdLine, operators);
-                Utils.ExpandTokens(tokens, getConvarValue);
+                Utils.ExpandTokens(tokens, getVariableValue);
                 tokens.RemoveAll(token => string.IsNullOrEmpty(token.value));
                 Utils.Parse(tokens);
             } catch (Exception e) {
@@ -615,24 +616,28 @@ namespace UShell
             List<List<Token>> cmds = Utils.Split(tokens, operators);
             for (int i = 0; i < cmds.Count; i++)
             {
-                string label = cmds[i][0].value;
-                List<string> args = new List<string>();
-                for (int j = 1; j < cmds[i].Count; j++)
-                    args.Add(cmds[i][j].value);
+                int offset = Utils.ResolveAssignment(cmds[i], setVariableValue);
+                if (cmds[i].Count > offset)
+                {
+                    string label = cmds[i][offset].value;
+                    List<string> args = new List<string>();
+                    for (int j = offset + 1; j < cmds[i].Count; j++)
+                        args.Add(cmds[i][j].value);
 
-                string unquoteLabel = Utils.RemoveQuoting(label);
-                if (unquoteLabel == label && !usedAliases.Contains(label) && _aliases.TryGetValue(label, out string aliasValue))
-                {
-                    usedAliases.Push(label);
-                    string cmd = aliasValue + " " + string.Join(" ", args);
-                    processCmdLineInternal(source, cmd, usedAliases);
-                    usedAliases.Pop();
-                }
-                else
-                {
-                    string[] fields = args.ToArray();
-                    Utils.RemoveQuoting(fields);
-                    processCmd(source, unquoteLabel, fields);
+                    string unquoteLabel = Utils.RemoveQuoting(label);
+                    if (unquoteLabel == label && !usedAliases.Contains(label) && _aliases.TryGetValue(label, out string aliasValue))
+                    {
+                        usedAliases.Push(label);
+                        string cmd = aliasValue + " " + string.Join(" ", args);
+                        processCmdLineInternal(source, cmd, usedAliases);
+                        usedAliases.Pop();
+                    }
+                    else
+                    {
+                        string[] fields = args.ToArray();
+                        Utils.RemoveQuoting(fields);
+                        processCmd(source, unquoteLabel, fields);
+                    }
                 }
             }
         }
@@ -975,33 +980,19 @@ namespace UShell
             }
         }
 
-        private string getConvarValue(string parameter)
+        private string getVariableValue(string name)
         {
-            if (_convars.TryGetValue(parameter, out ConvarCmd convarCmd))
-            {
-                List<object> instances;
-                if (convarCmd.IsStatic)
-                {
-                    instances = new List<object>();
-                    instances.Add(null);
-                }
-                else if (!_instances.TryGetValue(convarCmd.DeclaringType, out instances))
-                {
-                    return "";
-                }
-
-                if (convarCmd.CanRead)
-                {
-                    try
-                    {
-                        if (instances.Count > 0)
-                            return convarCmd.GetValue(instances[0]).ToString();
-                    }
-                    catch (Exception) {}
-                }
-            }
-
+            if (_variables.TryGetValue(name, out string value))
+                return value;
+                
             return "";
+        }
+        private void setVariableValue(string name, string value)
+        {
+            if (_variables.ContainsKey(name))
+                _variables[name] = value;
+            else
+                _variables.Add(name, value);
         }
 
         private void handleLog(string strLog, string stackTrace, LogType type)
