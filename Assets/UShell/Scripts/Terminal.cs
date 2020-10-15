@@ -383,7 +383,7 @@ namespace UShell.Consoles
             Event.PopEvent(outEvent);
 
             string tab = Shell.Main.GetCompletion(_input.text, out List<string> options);
-            _input.SetTextWithoutNotify(tab);
+            _input.SetTextWithoutNotify(_input.text + tab);
             _input.MoveTextEnd(false);
 
             if (options != null && options.Count > 1)

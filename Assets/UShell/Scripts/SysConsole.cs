@@ -309,13 +309,15 @@ namespace UShell.Consoles
         private void getTabComplete()
         {
             string tab = Shell.Main.GetCompletion(_currentLine, out List<string> options);
-            _currentLine = tab;
+            _currentLine += tab;
             drawInputline();
 
             StringBuilder strBuilder = new StringBuilder();
             if (options != null && options.Count > 1)
+            {
                 for (int i = 0; i < options.Count; i++)
                     strBuilder.Append(options[i]).Append(" ");
+            }
 
             outputString(strBuilder.ToString());
         }

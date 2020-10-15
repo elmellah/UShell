@@ -83,10 +83,10 @@ namespace UShell.Commands
             }
             return new string[0];
         }
-        public string GetCompletion(string label, string args, out List<string> options)
+        public string GetCompletion(string label, string[] args, out List<string> options)
         {
             options = new List<string>();
-            return args;
+            return "";
         }
 
         public bool Execute(string label, string[] args)

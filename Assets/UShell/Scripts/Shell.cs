@@ -27,6 +27,17 @@ namespace UShell
 @"    type 'echo message ...' to log a message (e.g. 'echo hello world!')
     type 'source path' to execute the content of a file as a command line (e.g. 'source ""C:\Users\MyName\Desktop\script.ush""')",
 };
+        private static readonly Token[] _operators =
+        {
+            new Token(Token.Type.NEWLINE, "\n"),
+            new Token(Token.Type.NEWLINE, "\r"),
+            new Token(Token.Type.SEPARATOR, ";"),
+        };
+        private static readonly char[] _blankCharacters =
+{
+            ' ',
+            '\t',
+        };
         private static string[] _builtinLabels = new string[]
         {
             "README",
@@ -434,28 +445,27 @@ namespace UShell
         /// <returns></returns>
         public string GetCompletion(string prefix, out List<string> options)
         {
-            //Aliases are not completed correctly!
+            options = new List<string>();
 
-            List<string> matches;
-            string label = Utils.GetFirstWord(prefix, ' ', '\t');
-            string args = Utils.GetArgs(prefix, ' ', '\t');
+            List<Token> tokens = Utils.Tokenize(prefix, _operators, false);
+            Utils.RemoveQuoting(tokens);
+            List<List<Token>> cmds = Utils.Split(tokens, _operators);
+            tokens = cmds[cmds.Count - 1];
+            string label = tokens[0].value;
+            string[] args = new string[tokens.Count - 1];
+            for (int i = 0; i < args.Length; i++)
+                args[i] = tokens[i + 1].value;
 
-            if (!string.IsNullOrEmpty(args) || prefix.EndsWith(" ") || prefix.EndsWith("\t"))
+            if (args.Length > 0 || Array.IndexOf(_blankCharacters, prefix[prefix.Length - 1]) > -1)
             {
                 if (_aliases.ContainsKey(label) || _builtinCmds.ContainsKey(label) || _cmds.ContainsKey(label) || _convars.ContainsKey(label) || _methods.ContainsKey(label))
-                {
-                    matches = new List<string>();
-                    matches.Add(label);
-                }
+                    options.Add(label);
                 else
-                {
-                    options = new List<string>();
-                    return prefix;
-                }
+                    return "";
             }
             else
             {
-                matches = Utils.GetWordsThatStartWith(label, false,
+                options = Utils.GetWordsThatStartWith(label, false,
                     _aliases.Keys.GetEnumerator(),
                     _builtinCmds.Keys.GetEnumerator(),
                     _cmds.Keys.GetEnumerator(),
@@ -463,43 +473,47 @@ namespace UShell
                     _methods.Keys.GetEnumerator());
             }
 
-            if (matches.Count == 0)
+            if (options.Count == 0)
             {
-                options = new List<string>();
-                return prefix;
+                return "";
             }
-            else if (matches.Count == 1)
+            else if (options.Count == 1)
             {
-                if (!_usedAliases.Contains(matches[0]) && _aliases.TryGetValue(matches[0], out string aliasValue))
+                string labelFound = options[0];
+
+                if (!_usedAliases.Contains(labelFound) && _aliases.TryGetValue(labelFound, out string aliasValue))
                 {
-                    _usedAliases.Push(matches[0]);
-                    string completion = GetCompletion(aliasValue + " " + args + Utils.GetEndSpace(prefix), out options);
+                    _usedAliases.Push(labelFound);
+                    prefix = prefix.Replace(label, aliasValue); //Bad
+                    string completion = GetCompletion(prefix, out options);
                     _usedAliases.Pop();
-                    return Utils.GetStartSpace(prefix) + completion.Replace(aliasValue.Trim(), matches[0]);
+
+                    return Utils.Diff(labelFound, label) + completion;
                 }
-                else if (_builtinCmds.TryGetValue(matches[0], out ICommand cmd) || _cmds.TryGetValue(matches[0], out cmd))
+                else if (_builtinCmds.TryGetValue(labelFound, out ICommand cmd) || _cmds.TryGetValue(labelFound, out cmd))
                 {
-                    string completion = cmd.GetCompletion(matches[0], args, out options);
-                    string result = Utils.GetStartSpace(prefix) + matches[0] + " " + completion;
-                    if (options.Count == 1)
-                        return result + " ";
-                    return result;
-                }
-                else if (_convars.ContainsKey(matches[0]) || _methods.ContainsKey(matches[0]))
-                {
-                    options = new List<string>();
-                    return Utils.GetStartSpace(prefix) + matches[0] + " ";
+                    string completion = Utils.Diff(labelFound, label) + cmd.GetCompletion(labelFound, args, out options);
+                    if (options.Count == 1 || args.Length <= 0)
+                    {
+                        if (Array.IndexOf(_blankCharacters, prefix[prefix.Length - 1]) > -1)
+                            return completion;
+                        else
+                            return completion + " ";
+                    }
+
+                    return completion;
                 }
                 else
                 {
-                    options = new List<string>();
-                    return prefix;
+                    if (Array.IndexOf(_blankCharacters, prefix[prefix.Length - 1]) > -1)
+                        return Utils.Diff(labelFound, label);
+                    else
+                        return Utils.Diff(labelFound, label) + " ";
                 }
             }
             else
             {
-                options = matches;
-                return Utils.GetStartSpace(prefix) + Utils.GetLongestCommonPrefix(matches);
+                return Utils.Diff(Utils.GetLongestCommonPrefix(options), label);
             }
         }
         /// <summary>
@@ -584,7 +598,7 @@ namespace UShell
         }
         private void processCmdLineVisibility(string source, string cmdLine, bool saveToHistory)
         {
-            if (!string.IsNullOrEmpty(cmdLine) && cmdLine[0] != ' ' && cmdLine[0] != '\t')
+            if (!string.IsNullOrEmpty(cmdLine) && Array.IndexOf(_blankCharacters, cmdLine[0]) < 0)
             {
                 Debug.Log(source + "> " + cmdLine);
                 if (saveToHistory && _history.GetValue(1) != cmdLine)
@@ -593,17 +607,10 @@ namespace UShell
         }
         private void processCmdLineInternal(string source, string cmdLine, Stack<string> usedAliases)
         {
-            Token[] operators =
-            {
-                new Token(Token.Type.NEWLINE, "\n"),
-                new Token(Token.Type.NEWLINE, "\r"),
-                new Token(Token.Type.SEPARATOR, ";")
-            };
-
             List<Token> tokens;
             cmdLine = Utils.RemoveEscapedSeparators(cmdLine, new char[] { '\n', '\r' });
             try {
-                tokens = Utils.Tokenize(cmdLine, operators);
+                tokens = Utils.Tokenize(cmdLine, _operators);
                 Utils.ExpandTokens(tokens, getVariableValue);
                 tokens.RemoveAll(token => string.IsNullOrEmpty(token.value));
                 Utils.Parse(tokens);
@@ -612,7 +619,7 @@ namespace UShell
                 return;
             }
 
-            List<List<Token>> cmds = Utils.Split(tokens, operators);
+            List<List<Token>> cmds = Utils.Split(tokens, _operators);
             for (int i = 0; i < cmds.Count; i++)
             {
                 int offset = Utils.ResolveAssignment(cmds[i], setVariableValue);
@@ -1126,17 +1133,22 @@ namespace UShell
             }
             return new string[0];
         }
-        public string GetCompletion(string label, string args, out List<string> options)
+        public string GetCompletion(string label, string[] args, out List<string> options)
         {
-            if (label == "help")
-                return Utils.GetCompletion(args, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
-            else if (label == "type")
-                return Utils.GetCompletion(args, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _aliases.Keys.GetEnumerator(), _convars.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
-            else if (label == "unalias")
-                return Utils.GetCompletion(args, out options, _aliases.Keys.GetEnumerator());
+            string arg = args.Length == 1 ? args[0] : "";
+                
+            if (args.Length == 0 || args.Length == 1)
+            {
+                if (label == "help")
+                    return Utils.GetCompletion(arg, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
+                else if (label == "type")
+                    return Utils.GetCompletion(arg, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _aliases.Keys.GetEnumerator(), _convars.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
+                else if (label == "unalias")
+                    return Utils.GetCompletion(arg, out options, _aliases.Keys.GetEnumerator());
+            }
 
             options = new List<string>();
-            return args;
+            return "";
         }
 
         public bool Execute(string label, string[] args)
@@ -1930,7 +1942,7 @@ namespace UShell
     {
         string[] GetSyntaxes(string label);
         string[] GetInfos(string label);
-        string GetCompletion(string label, string args, out List<string> options);
+        string GetCompletion(string label, string[] args, out List<string> options);
 
         bool Execute(string label, string[] args);
     }

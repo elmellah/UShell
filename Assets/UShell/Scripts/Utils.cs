@@ -53,7 +53,7 @@ namespace UShell
         #region COMPLETION
         public static string GetCompletion(string prefix, out List<string> options, params IEnumerator[] enumerators)
         {
-            List<string> matches = new List<string>();
+            options = new List<string>();
 
             if (prefix.EndsWith(" ") || prefix.EndsWith("\t"))
             {
@@ -64,8 +64,7 @@ namespace UShell
                     {
                         if (enumerators[i].Current.ToString() == prefix)
                         {
-                            matches = new List<string>();
-                            matches.Add(prefix);
+                            options.Add(prefix);
                             containsKey = true;
                             break;
                         }
@@ -73,32 +72,19 @@ namespace UShell
                 }
 
                 if (!containsKey)
-                {
-                    options = new List<string>();
-                    return prefix;
-                }
+                    return "";
             }
             else
             {
-                matches = Utils.GetWordsThatStartWith(prefix, true, enumerators);
+                options = Utils.GetWordsThatStartWith(prefix, false, enumerators);
             }
 
-
-            if (matches.Count == 0)
-            {
-                options = new List<string>();
-                return prefix;
-            }
-            else if (matches.Count == 1)
-            {
-                options = matches;
-                return matches[0];
-            }
+            if (options.Count == 0)
+                return "";
+            else if (options.Count == 1)
+                return Utils.Diff(options[0], prefix);
             else
-            {
-                options = matches;
-                return Utils.GetLongestCommonPrefix(matches);
-            }
+                return Utils.Diff(Utils.GetLongestCommonPrefix(options), prefix);
         }
 
         public static List<string> GetWordsThatStartWith(string prefix, bool ignoreCase, params IEnumerator[] enumerators)
@@ -135,6 +121,26 @@ namespace UShell
                     return i - 1;
 
             return minl;
+        }
+
+        public static string Diff(string a, string b, bool ignoreCase = false)
+        {
+            int i = 0;
+            for (; i < b.Length; i++)
+            {
+                if (ignoreCase)
+                {
+                    if (char.ToUpperInvariant(a[i]) != char.ToUpperInvariant(b[i]))
+                        break;
+                }
+                else
+                {
+                    if (a[i] != b[i])
+                        break;
+                }
+            }
+
+            return a.Substring(i, a.Length - i);
         }
         #endregion
 
@@ -657,7 +663,7 @@ namespace UShell
         /// </para>
         /// </param>
         /// <returns></returns>
-        public static List<Token> Tokenize(string input, Token[] operators)
+        public static List<Token> Tokenize(string input, Token[] operators, bool throwExceptions = true)
         {
             //substring -> GC Alloc : to solve, create a new type (Token) which is the data of a string and 2 int, one for the start and on for the end => no string created
 
@@ -769,13 +775,16 @@ namespace UShell
             }
 
 
-            string error = "lexer: missing `{0}` at the end of the string";
-            if (esc)
-                throw new Exception(string.Format(error, "\\"));
-            else if (sQ)
-                throw new Exception(string.Format(error, "'"));
-            else if (dQ)
-                throw new Exception(string.Format(error, "\""));
+            if (throwExceptions)
+            {
+                string error = "lexer: missing `{0}` at the end of the string";
+                if (esc)
+                    throw new Exception(string.Format(error, "\\"));
+                else if (sQ)
+                    throw new Exception(string.Format(error, "'"));
+                else if (dQ)
+                    throw new Exception(string.Format(error, "\""));
+            }
 
 
             if (input.Length != tokenStartPosition)
@@ -906,6 +915,12 @@ namespace UShell
             }
 
             return split;
+        }
+        /// <inheritdoc/>
+        public static void RemoveQuoting(List<Token> tokens)
+        {
+            for (int i = 0; i < tokens.Count; i++)
+                tokens[i] = new Token(tokens[i].type, RemoveQuoting(tokens[i].value));
         }
         /// <inheritdoc/>
         public static void RemoveQuoting(string[] words)
