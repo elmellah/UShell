@@ -265,7 +265,7 @@ namespace UShell.Commands
             }
             return new string[0];
         }
-        public string GetCompletion(string label, string[] args, out List<string> options)
+        public string GetCompletion(string label, string[] args, bool endWithBlank, out List<string> options)
         {
             if (label == "lds")
             {
@@ -277,7 +277,7 @@ namespace UShell.Commands
                     for (int i = 0; i < sceneCount; i++)
                         scenes[i] = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
 
-                    return Utils.GetCompletion(arg, out options, scenes.GetEnumerator());
+                    return Utils.GetCompletion(arg, endWithBlank, out options, scenes.GetEnumerator());
                 }
             }
 

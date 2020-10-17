@@ -51,13 +51,12 @@ namespace UShell
         const string parseError = "cannot parse '{0}' to {1}";
 
         #region COMPLETION
-        public static string GetCompletion(string prefix, out List<string> options, params IEnumerator[] enumerators)
+        public static string GetCompletion(string prefix, bool endWithBlank, out List<string> options, params IEnumerator[] enumerators)
         {
             options = new List<string>();
 
-            if (prefix.EndsWith(" ") || prefix.EndsWith("\t"))
+            if (endWithBlank)
             {
-                bool containsKey = false;
                 for (int i = 0; i < enumerators.Length; i++)
                 {
                     while (enumerators[i].MoveNext())
@@ -65,19 +64,16 @@ namespace UShell
                         if (enumerators[i].Current.ToString() == prefix)
                         {
                             options.Add(prefix);
-                            containsKey = true;
                             break;
                         }
                     }
                 }
 
-                if (!containsKey)
+                if (options.Count <= 0)
                     return "";
             }
             else
-            {
                 options = Utils.GetWordsThatStartWith(prefix, false, enumerators);
-            }
 
             if (options.Count == 0)
                 return "";
@@ -141,6 +137,26 @@ namespace UShell
             }
 
             return a.Substring(i, a.Length - i);
+        }
+
+        public static bool EndsWith(this string str, char[] values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (str.EndsWith(values[i].ToString()))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static string ReplaceFirst(this string str, string oldValue, string newValue)
+        {
+            int oldValuePos = str.IndexOf(oldValue, 0, StringComparison.Ordinal);
+            if (oldValuePos >= 0)
+                return str.Substring(0, oldValuePos) + newValue + str.Substring(oldValuePos + oldValue.Length, str.Length - (oldValuePos + oldValue.Length));
+            
+            return str;
         }
         #endregion
 
@@ -1109,6 +1125,14 @@ namespace UShell
                 words.Add(input.Substring(startPos, input.Length - startPos));
 
             return words.ToArray();
+        }
+        public static string[] ExtractArguments(List<Token> tokens)
+        {
+            string[] args = new string[tokens.Count - 1];
+            for (int i = 0; i < args.Length; i++)
+                args[i] = tokens[i + 1].value;
+
+            return args;
         }
         #endregion
 
