@@ -73,14 +73,14 @@ namespace UShell
                     return "";
             }
             else
-                options = Utils.GetWordsThatStartWith(prefix, false, enumerators);
+                options = GetWordsThatStartWith(prefix, false, enumerators);
 
             if (options.Count == 0)
                 return "";
             else if (options.Count == 1)
-                return Utils.Diff(options[0], prefix);
+                return options[0].Remove(0, prefix.Length);
             else
-                return Utils.Diff(Utils.GetLongestCommonPrefix(options), prefix);
+                return GetLongestCommonPrefix(options).Remove(0, prefix.Length);
         }
 
         public static List<string> GetWordsThatStartWith(string prefix, bool ignoreCase, params IEnumerator[] enumerators)
@@ -113,50 +113,12 @@ namespace UShell
             int minl = Math.Min(a.Length, b.Length);
 
             for (int i = 1; i <= minl; i++)
+            {
                 if (!a.StartsWith(b.Substring(0, i), false, CultureInfo.InvariantCulture))
                     return i - 1;
+            }
 
             return minl;
-        }
-
-        public static string Diff(string a, string b, bool ignoreCase = false)
-        {
-            int i = 0;
-            for (; i < b.Length; i++)
-            {
-                if (ignoreCase)
-                {
-                    if (char.ToUpperInvariant(a[i]) != char.ToUpperInvariant(b[i]))
-                        break;
-                }
-                else
-                {
-                    if (a[i] != b[i])
-                        break;
-                }
-            }
-
-            return a.Substring(i, a.Length - i);
-        }
-
-        public static bool EndsWith(this string str, char[] values)
-        {
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (str.EndsWith(values[i].ToString()))
-                    return true;
-            }
-
-            return false;
-        }
-
-        public static string ReplaceFirst(this string str, string oldValue, string newValue)
-        {
-            int oldValuePos = str.IndexOf(oldValue, 0, StringComparison.Ordinal);
-            if (oldValuePos >= 0)
-                return str.Substring(0, oldValuePos) + newValue + str.Substring(oldValuePos + oldValue.Length, str.Length - (oldValuePos + oldValue.Length));
-            
-            return str;
         }
         #endregion
 
@@ -1061,71 +1023,6 @@ namespace UShell
                 }
             }
         }
-        public static string[] Split(string input, params char[] separators)
-        {
-            List<string> words = new List<string>();
-            bool dq = false; //isDoubleQuoting ('"')
-            bool sq = false; //isSingleQuoting ('\'')
-            bool esc = false; //isEscaping ('\\')
-            int startPos = 0;
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (sq)
-                {
-                    if (input[i] == '\'')
-                        sq = false;
-                }
-                else if (dq)
-                {
-                    if (input[i] == '"')
-                    {
-                        if (!esc)
-                            dq = false;
-                        esc = false;
-                    }
-                    else if (input[i] == '\\')
-                    {
-                        if (esc)
-                            esc = false;
-                        else if (input[i + 1] == '"' || input[i + 1] == '\\')
-                            esc = true;
-                    }
-                }
-                else
-                {
-                    if (input[i] == '\'')
-                    {
-                        if (!esc)
-                            sq = true;
-                        esc = false;
-                    }
-                    else if (input[i] == '"')
-                    {
-                        if (!esc)
-                            dq = true;
-                        esc = false;
-                    }
-                    else if (input[i] == '\\')
-                        esc = !esc;
-                    else if (Array.IndexOf(separators, input[i]) > -1)
-                    {
-                        if (!esc)
-                        {
-                            if (i != startPos)
-                                words.Add(input.Substring(startPos, i - startPos));
-                            startPos = i + 1;
-                        }
-                        esc = false;
-                    }
-                    else
-                        esc = false;
-                }
-            }
-            if (input.Length != startPos)
-                words.Add(input.Substring(startPos, input.Length - startPos));
-
-            return words.ToArray();
-        }
         public static string[] ExtractArguments(List<Token> tokens)
         {
             string[] args = new string[tokens.Count - 1];
@@ -1136,101 +1033,24 @@ namespace UShell
         }
         #endregion
 
-        #region MISC
-        public static string GetStartSpace(string str)
+        #region EXTENSIONS
+        public static bool EndsWith(this string str, char[] values)
         {
-            int spaceCount = 0;
-            for (int i = 0; i < str.Length; i++)
+            for (int i = 0; i < values.Length; i++)
             {
-                if (str[i] == ' ')
-                    spaceCount++;
-                else
-                    break;
+                if (str.EndsWith(values[i].ToString()))
+                    return true;
             }
 
-            return new string(' ', spaceCount);
+            return false;
         }
-        public static string GetEndSpace(string str)
+        public static string ReplaceFirst(this string str, string oldValue, string newValue)
         {
-            int spaceCount = 0;
-            for (int i = str.Length - 1; i >= 0; i--)
-            {
-                if (str[i] == ' ')
-                    spaceCount++;
-                else
-                    break;
-            }
+            int oldValuePos = str.IndexOf(oldValue, 0, StringComparison.Ordinal);
+            if (oldValuePos >= 0)
+                return str.Substring(0, oldValuePos) + newValue + str.Substring(oldValuePos + oldValue.Length, str.Length - (oldValuePos + oldValue.Length));
 
-            return new string(' ', spaceCount);
-        }
-
-        public static string GetFirstWord(string input, params char[] separators)
-        {
-            bool dq = false; //isDoubleQuoting ('"')
-            bool sq = false; //isSingleQuoting ('\'')
-            bool esc = false; //isEscaping ('\\')
-            int startPos = 0;
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (sq)
-                {
-                    if (input[i] == '\'')
-                        sq = false;
-                }
-                else if (dq)
-                {
-                    if (input[i] == '"')
-                    {
-                        if (!esc)
-                            dq = false;
-                        esc = false;
-                    }
-                    else if (input[i] == '\\')
-                    {
-                        if (esc)
-                            esc = false;
-                        else if (input[i + 1] == '"' || input[i + 1] == '\\')
-                            esc = true;
-                    }
-                }
-                else
-                {
-                    if (input[i] == '\'')
-                    {
-                        if (!esc)
-                            sq = true;
-                        esc = false;
-                    }
-                    else if (input[i] == '"')
-                    {
-                        if (!esc)
-                            dq = true;
-                        esc = false;
-                    }
-                    else if (input[i] == '\\')
-                        esc = !esc;
-                    else if (Array.IndexOf(separators, input[i]) > -1)
-                    {
-                        if (!esc)
-                        {
-                            if (i != startPos)
-                                return input.Substring(startPos, i - startPos);
-                            startPos = i + 1;
-                        }
-                        esc = false;
-                    }
-                    else
-                        esc = false;
-                }
-            }
-            if (input.Length != startPos)
-                return input.Substring(startPos, input.Length - startPos);
-
-            return "";
-        }
-        public static string GetArgs(string value, params char[] separators)
-        {
-            return value.Trim().Remove(0, GetFirstWord(value, separators).Length).Trim();
+            return str;
         }
         #endregion
     }

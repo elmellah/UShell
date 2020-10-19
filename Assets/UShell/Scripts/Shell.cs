@@ -495,28 +495,28 @@ namespace UShell
                 {
                     _usedAliases.Push(labelFound);
                     prefix = prefix.ReplaceFirst(label, aliasValue);
-                    string completion = GetCompletion(prefix, out options);
+                    string completion = labelFound.Remove(0, label.Length) + GetCompletion(prefix, out options);
                     _usedAliases.Pop();
 
-                    return Utils.Diff(labelFound, label) + completion;
+                    return completion;
                 }
                 else if (_builtinCmds.TryGetValue(labelFound, out ICommand cmd) || _cmds.TryGetValue(labelFound, out cmd))
                 {
                     string[] args = Utils.ExtractArguments(tokens);
-                    string completion = Utils.Diff(labelFound, label) + cmd.GetCompletion(labelFound, args, args.Length == 0 ? false : endWithBlank, out options);
+                    string completion = labelFound.Remove(0, label.Length) + cmd.GetCompletion(labelFound, args, args.Length == 0 ? false : endWithBlank, out options);
                     if ((options.Count == 1 || args.Length <= 0) && !endWithBlank)
                         return completion + " ";
                     return completion;
                 }
                 else
                 {
-                    if (endWithBlank)
-                        return Utils.Diff(labelFound, label);
-                    return Utils.Diff(labelFound, label) + " ";
+                    if (!endWithBlank)
+                        return labelFound.Remove(0, label.Length) + " ";
+                    return labelFound.Remove(0, label.Length);
                 }
             }
             else
-                return Utils.Diff(Utils.GetLongestCommonPrefix(options), label);
+                return Utils.GetLongestCommonPrefix(options).Remove(0, label.Length);
         }
         /// <summary>
         /// 
