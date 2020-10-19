@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.ComponentModel;
+using System.Linq;
 
 namespace UShell
 {
@@ -59,13 +60,10 @@ namespace UShell
             {
                 for (int i = 0; i < lexicon.Length; i++)
                 {
-                    foreach (string word in lexicon[i])
+                    if (lexicon[i].Contains(prefix))
                     {
-                        if (word == prefix)
-                        {
-                            options.Add(prefix);
-                            break;
-                        }
+                        options.Add(prefix);
+                        break;
                     }
                 }
 
