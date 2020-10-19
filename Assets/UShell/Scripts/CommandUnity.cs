@@ -277,7 +277,7 @@ namespace UShell.Commands
                     for (int i = 0; i < sceneCount; i++)
                         scenes[i] = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
 
-                    return Utils.GetCompletion(arg, endWithBlank, out options, scenes.GetEnumerator());
+                    return Utils.GetCompletion(arg, endWithBlank, out options, scenes);
                 }
             }
 

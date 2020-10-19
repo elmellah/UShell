@@ -475,13 +475,13 @@ namespace UShell
             else
             {
                 options = Utils.GetWordsThatStartWith(label, false,
-                    _builtinCmds.Keys.GetEnumerator(),
-                    _cmds.Keys.GetEnumerator(),
-                    _convars.Keys.GetEnumerator(),
-                    _methods.Keys.GetEnumerator());
+                    _builtinCmds.Keys,
+                    _cmds.Keys,
+                    _convars.Keys,
+                    _methods.Keys);
 
                 if (!bypassAliases)
-                    options.AddRange(Utils.GetWordsThatStartWith(label, false, _aliases.Keys.GetEnumerator()));
+                    options.AddRange(Utils.GetWordsThatStartWith(label, false, _aliases.Keys));
             }
 
             if (options.Count == 0)
@@ -526,16 +526,12 @@ namespace UShell
         /// <returns></returns>
         public List<string> GetSimilarCmds(string input, int maxDistance)
         {
-            IEnumerator[] enumerators = new IEnumerator[]
-            {
-                _aliases.Keys.GetEnumerator(),
-                _builtinCmds.Keys.GetEnumerator(),
-                _cmds.Keys.GetEnumerator(),
-                _convars.Keys.GetEnumerator(),
-                _methods.Keys.GetEnumerator(),
-            };
-
-            return Utils.GetSimilarWords(input, true, maxDistance, true, enumerators);
+            return Utils.GetSimilarWords(input, true, maxDistance, true,
+                _aliases.Keys,
+                _builtinCmds.Keys,
+                _cmds.Keys,
+                _convars.Keys,
+                _methods.Keys);
         }
         /// <summary>
         /// 
@@ -1142,11 +1138,11 @@ namespace UShell
             if (args.Length == 0 || args.Length == 1)
             {
                 if (label == "help")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
+                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys, _cmds.Keys, _methods.Keys);
                 else if (label == "type")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys.GetEnumerator(), _cmds.Keys.GetEnumerator(), _aliases.Keys.GetEnumerator(), _convars.Keys.GetEnumerator(), _methods.Keys.GetEnumerator());
+                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys, _cmds.Keys, _aliases.Keys, _convars.Keys, _methods.Keys);
                 else if (label == "unalias")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _aliases.Keys.GetEnumerator());
+                    return Utils.GetCompletion(arg, endWithBlank, out options, _aliases.Keys);
             }
 
             options = new List<string>();

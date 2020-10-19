@@ -51,17 +51,17 @@ namespace UShell
         const string parseError = "cannot parse '{0}' to {1}";
 
         #region COMPLETION
-        public static string GetCompletion(string prefix, bool endWithBlank, out List<string> options, params IEnumerator[] enumerators)
+        public static string GetCompletion(string prefix, bool endWithBlank, out List<string> options, params IEnumerable<string>[] lexicon)
         {
             options = new List<string>();
 
             if (endWithBlank)
             {
-                for (int i = 0; i < enumerators.Length; i++)
+                for (int i = 0; i < lexicon.Length; i++)
                 {
-                    while (enumerators[i].MoveNext())
+                    foreach (string word in lexicon[i])
                     {
-                        if (enumerators[i].Current.ToString() == prefix)
+                        if (word == prefix)
                         {
                             options.Add(prefix);
                             break;
@@ -73,7 +73,7 @@ namespace UShell
                     return "";
             }
             else
-                options = GetWordsThatStartWith(prefix, false, enumerators);
+                options = GetWordsThatStartWith(prefix, false, lexicon);
 
             if (options.Count == 0)
                 return "";
@@ -83,15 +83,14 @@ namespace UShell
                 return GetLongestCommonPrefix(options).Remove(0, prefix.Length);
         }
 
-        public static List<string> GetWordsThatStartWith(string prefix, bool ignoreCase, params IEnumerator[] enumerators)
+        public static List<string> GetWordsThatStartWith(string prefix, bool ignoreCase, params IEnumerable<string>[] lexicon)
         {
             List<string> words = new List<string>();
 
-            for (int i = 0; i < enumerators.Length; i++)
+            for (int i = 0; i < lexicon.Length; i++)
             {
-                while (enumerators[i].MoveNext())
+                foreach (string word in lexicon[i])
                 {
-                    string word = enumerators[i].Current.ToString();
                     if (!words.Contains(word) && word.StartsWith(prefix, ignoreCase, CultureInfo.InvariantCulture))
                         words.Add(word);
                 }
@@ -160,11 +159,11 @@ namespace UShell
                 return;
             }
 
-            IEnumerator enumerator = ((IEnumerable)obj).GetEnumerator();
+            IEnumerable enumerable = (IEnumerable)obj;
             stringBuilder.Append('\t', depth).Append("{\n");
-            while (enumerator.MoveNext())
+            foreach (object o in enumerable)
             {
-                convertToStringInternal(enumerator.Current, stringBuilder, depth + 1);
+                convertToStringInternal(o, stringBuilder, depth + 1);
                 stringBuilder.Append("\n");
             }
             stringBuilder.Append('\t', depth).Append("}");
@@ -449,7 +448,7 @@ namespace UShell
         #endregion
 
         #region FUZZY SEARCH
-        public static List<string> GetSimilarWords(string input, bool ignoreCase, int maxDistance, bool sort, params IEnumerator[] enumerators)
+        public static List<string> GetSimilarWords(string input, bool ignoreCase, int maxDistance, bool sort, params IEnumerable<string>[] lexicon)
         {
             List<string> words = new List<string>();
             List<string>[] unsortedWords = null;
@@ -460,11 +459,10 @@ namespace UShell
                     unsortedWords[i] = new List<string>();
             }
 
-            for (int i = 0; i < enumerators.Length; i++)
+            for (int i = 0; i < lexicon.Length; i++)
             {
-                while (enumerators[i].MoveNext())
+                foreach (string word in lexicon[i])
                 {
-                    string word = (string)enumerators[i].Current;
                     int distance = Utils.GetLevenshteinDistance(input, word, ignoreCase);
                     if (!words.Contains(word) && distance <= maxDistance)
                     {
