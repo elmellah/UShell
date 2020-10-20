@@ -757,7 +757,7 @@ namespace UShell.Commands
         }
         private bool executeMic(string[] args)
         {
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL && !UNITY_STANDALONE_OSX
             if (Microphone.devices.Length <= 0)
                 return true;
 
@@ -811,6 +811,7 @@ namespace UShell.Commands
         }
         private bool executeWebcam(string[] args)
         {
+#if !UNITY_STANDALONE_OSX
             string log = "";
             var devices = WebCamTexture.devices;
 
@@ -818,6 +819,7 @@ namespace UShell.Commands
                 log += devices[i].name + "\n";
 
             Debug.Log(log);
+#endif
             return true;
         }
         private bool executeTier(string[] args)
