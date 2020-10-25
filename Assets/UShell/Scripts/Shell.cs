@@ -524,7 +524,20 @@ namespace UShell
         /// <returns></returns>
         public List<string> GetSimilarCmds(string input, int maxDistance)
         {
-            return Utils.GetSimilarWords(input, true, maxDistance, true,
+            string label = "";
+            List<Token> tokens = Utils.Tokenize(input, _operators, false);
+            if (tokens.Count > 0)
+            {
+                List<List<Token>> cmds = Utils.Split(tokens, _operators);
+                if (cmds.Count > 0)
+                {
+                    tokens = cmds[cmds.Count - 1];
+                    Utils.RemoveQuoting(tokens);
+                    label = tokens[0].value;
+                }
+            }
+
+            return Utils.GetSimilarWords(label, true, maxDistance, true,
                 _aliases.Keys,
                 _builtinCmds.Keys,
                 _cmds.Keys,
@@ -809,9 +822,7 @@ namespace UShell
                     Debug.LogWarning(string.Format(cannotModify, label));
             }
             else
-            {
                 Debug.LogWarning(string.Format(tooManyArgs, label));
-            }
         }
         private void processMethod(string source, List<MethodInfo> methodInfos, string label, string[] fields)
         {
@@ -841,7 +852,6 @@ namespace UShell
                 for (int j = 0; j < args.Length; j++)
                 {
                     TypeConverter converter = TypeDescriptor.GetConverter(parameters[j].ParameterType);
-
                     try
                     {
                         args[j] = Utils.ConvertFromString(converter, fields[j]);
