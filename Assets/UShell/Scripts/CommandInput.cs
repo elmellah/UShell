@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
+using System;
 
 namespace UShell.Commands
 {
@@ -89,21 +90,23 @@ namespace UShell.Commands
             return "";
         }
 
-        public bool Execute(string label, string[] args)
+        public void Execute(string label, string[] args)
         {
             switch (label)
             {
                 case "bind":
-                    return executeBind(args);
+                    executeBind(args);
+                    break;
                 case "unbind":
-                    return executeUnbind(args);
+                    executeUnbind(args);
+                    break;
                 case "keycode":
-                    return executeKeycode(args);
+                    executeKeycode(args);
+                    break;
             }
-            return true;
         }
 
-        private bool executeBind(string[] args)
+        private void executeBind(string[] args)
         {
             if (args.Length == 0)
             {
@@ -119,10 +122,9 @@ namespace UShell.Commands
                 _commands.Add(args[1]);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeUnbind(string[] args)
+        private void executeUnbind(string[] args)
         {
             if (args.Length == 1)
             {
@@ -137,10 +139,9 @@ namespace UShell.Commands
                     Debug.LogWarning("no entry for " + args[0]);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeKeycode(string[] args)
+        private void executeKeycode(string[] args)
         {
             System.Array keyCodes = System.Enum.GetValues(typeof(KeyCode));
             StringBuilder strBuilder = new StringBuilder();
@@ -153,7 +154,6 @@ namespace UShell.Commands
             }
 
             Debug.Log(strBuilder.ToString());
-            return true;
         }
         #endregion
     }

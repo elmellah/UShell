@@ -281,50 +281,65 @@ namespace UShell.Commands
             return "";
         }
 
-        public bool Execute(string label, string[] args)
+        public void Execute(string label, string[] args)
         {
             switch (label)
             {
                 case "ping":
-                    return executePing(args);
+                    executePing(args);
+                    break;
                 case "quit":
-                    return executeQuit(args);
+                    executeQuit(args);
+                    break;
                 case "ppref":
-                    return executePPREF(args);
+                    executePPREF(args);
+                    break;
                 case "lds":
-                    return executeLDS(args);
+                    executeLDS(args);
+                    break;
                 case "screen":
-                    return executeScreen(args);
+                    executeScreen(args);
+                    break;
                 case "screenshot":
-                    return executeScreenshot(args);
+                    executeScreenshot(args);
+                    break;
                 case "fps":
-                    return executeFPS(args);
+                    executeFPS(args);
+                    break;
                 case "debug":
-                    return executeDebug(args);
+                    executeDebug(args);
+                    break;
                 case "volume":
-                    return executeVolume(args);
+                    executeVolume(args);
+                    break;
                 case "beep":
-                    return executeBeep(args);
+                    executeBeep(args);
+                    break;
                 case "path":
-                    return executePath(args);
+                    executePath(args);
+                    break;
                 case "auth":
-                    return executeAuth(args);
+                    executeAuth(args);
+                    break;
                 case "time":
-                    return executeTime(args);
+                    executeTime(args);
+                    break;
                 case "mic":
-                    return executeMic(args);
+                    executeMic(args);
+                    break;
                 case "cursor":
-                    return executeCursor(args);
+                    executeCursor(args);
+                    break;
                 case "webcam":
-                    return executeWebcam(args);
+                    executeWebcam(args);
+                    break;
                 case "tier":
-                    return executeTier(args);
+                    executeTier(args);
+                    break;
             }
-
-            return true;
         }
 
-        private bool executePing(string[] args)
+        private void executePing(string[] args)
         {
 #if !UNITY_WEBGL
             if (args.Length == 1)
@@ -335,11 +350,10 @@ namespace UShell.Commands
                 _isPinging = true;
             }
             else
-                return false;
+                throw new ArgumentException();
 #endif
-            return true;
         }
-        private bool executeQuit(string[] args)
+        private void executeQuit(string[] args)
         {
             if (args.Length == 0)
             {
@@ -351,10 +365,9 @@ namespace UShell.Commands
                 Application.Quit(exitCode);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeLDS(string[] args)
+        private void executeLDS(string[] args)
         {
             if (args.Length == 1)
             {
@@ -373,10 +386,9 @@ namespace UShell.Commands
                 SceneManager.LoadScene(sceneName);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeScreenshot(string[] args)
+        private void executeScreenshot(string[] args)
         {
             if (args.Length == 0)
             {
@@ -405,10 +417,9 @@ namespace UShell.Commands
                 Debug.Log(Application.dataPath + "/" + args[0]);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeDebug(string[] args)
+        private void executeDebug(string[] args)
         {
             if (args.Length == 0)
             {
@@ -421,31 +432,31 @@ namespace UShell.Commands
                 {
                     case "-a":
                         Debug.LogAssertion(message, this);
-                        return true;
+                        break;
                     case "-e":
                         Debug.LogError(message, this);
-                        return true;
+                        break;
                     case "-x":
                         Debug.LogException(new Exception(message), this);
-                        return true;
+                        break;
                     case "-l":
                         Debug.Log(message, this);
-                        return true;
+                        break;
                     case "-w":
                         Debug.LogWarning(message, this);
-                        return true;
+                        break;
                     case "-B":
                         Debug.Break();
-                        return true;
+                        break;
                     case "-V":
                         Debug.Log(Debug.developerConsoleVisible);
-                        return true;
+                        break;
                     case "-C":
                         Debug.ClearDeveloperConsole();
-                        return true;
+                        break;
                     case "-D":
                         Debug.Log(Debug.isDebugBuild);
-                        return true;
+                        break;
                     case "-H":
                         if (args.Length == 1)
                             Debug.Log(_hideDevConsole);
@@ -455,8 +466,8 @@ namespace UShell.Commands
                             _hideDevConsole = hideDevConsole;
                         }
                         else
-                            return false;
-                        return true;
+                            throw new ArgumentException();
+                        break;
                     case "-L":
                         if (args.Length == 3)
                         {
@@ -470,8 +481,8 @@ namespace UShell.Commands
                                 Debug.LogError("cannot parse \'" + args[1] + "\' to Vector3");
                         }
                         else
-                            return false;
-                        return true;
+                            throw new ArgumentException();
+                        break;
                     case "-R":
                         if (args.Length == 3)
                         {
@@ -485,8 +496,8 @@ namespace UShell.Commands
                                 Debug.LogError("cannot parse \'" + args[1] + "\' to Vector3");
                         }
                         else
-                            return false;
-                        return true;
+                            throw new ArgumentException();
+                        break;
                     case "-G":
                         int size = 64;
                         Color color = Color.grey;
@@ -497,15 +508,14 @@ namespace UShell.Commands
                             Debug.DrawLine(new Vector3(-size, 0f, i), new Vector3(size, 0f, i), color, duration, depthTest);
                             Debug.DrawLine(new Vector3(i, 0f, -size), new Vector3(i, 0f, size), color, duration, depthTest);
                         }
-                        return true;
+                        break;
                     default:
                         Debug.Log(string.Join(" ", args, 0, args.Length));
-                        return true;
+                        break;
                 }
             }
-            return true;
         }
-        private bool executeVolume(string[] args)
+        private void executeVolume(string[] args)
         {
             if (args.Length == 0)
             {
@@ -518,15 +528,14 @@ namespace UShell.Commands
                 AudioListener.volume = volume;
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeBeep(string[] args)
+        private void executeBeep(string[] args)
         {
             if (_beepSource == null)
             {
                 Debug.LogError("the audio source is not set!");
-                return true;
+                return;
             }
 
             if (args.Length == 0)
@@ -551,10 +560,9 @@ namespace UShell.Commands
                 _beepSource.Play();
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executePPREF(string[] args)
+        private void executePPREF(string[] args)
         {
             if (args.Length == 1)
             {
@@ -563,7 +571,7 @@ namespace UShell.Commands
                 else if (args[0] == "-S")
                     PlayerPrefs.Save();
                 else
-                    return false;
+                    throw new ArgumentException();
             }
             else if (args.Length == 2)
             {
@@ -585,7 +593,7 @@ namespace UShell.Commands
                         Debug.Log(PlayerPrefs.GetString(args[1]));
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else if (args.Length == 3)
@@ -608,14 +616,13 @@ namespace UShell.Commands
                         }
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeFPS(string[] args)
+        private void executeFPS(string[] args)
         {
             if (args.Length == 0)
             {
@@ -627,10 +634,9 @@ namespace UShell.Commands
                 Application.targetFrameRate = target;
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeScreen(string[] args)
+        private void executeScreen(string[] args)
         {
             string log;
 
@@ -647,9 +653,8 @@ namespace UShell.Commands
                 log += "\t" + i + "- " + resolutions[i].width + "x" + resolutions[i].height + " (" + resolutions[i].refreshRate + "Hz)\n";
 
             Debug.Log(log);
-            return true;
         }
-        private bool executePath(string[] args)
+        private void executePath(string[] args)
         {
             Debug.Log(
                 "absolute url       " + Application.absoluteURL +
@@ -661,9 +666,8 @@ namespace UShell.Commands
                 "\nworking directory  " + Environment.CurrentDirectory +
                 "\nassembly           " + Assembly.GetExecutingAssembly().Location
             );
-            return true;
         }
-        private bool executeAuth(string[] args)
+        private void executeAuth(string[] args)
         {
             if (args.Length == 0)
             {
@@ -685,14 +689,13 @@ namespace UShell.Commands
                         Application.RequestUserAuthorization(UserAuthorization.WebCam);
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeTime(string[] args)
+        private void executeTime(string[] args)
         {
             if (args.Length == 0)
             {
@@ -720,7 +723,7 @@ namespace UShell.Commands
                         Debug.Log(Time.maximumParticleDeltaTime);
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else if (args.Length == 2)
@@ -744,18 +747,17 @@ namespace UShell.Commands
                         Time.maximumParticleDeltaTime = maximumParticleDeltaTime;
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeMic(string[] args)
+        private void executeMic(string[] args)
         {
 #if !UNITY_WEBGL && !UNITY_STANDALONE_OSX
             if (Microphone.devices.Length <= 0)
-                return true;
+                return;
 
             StringBuilder strBuilder = new StringBuilder();
             for (int i = 0; i < Microphone.devices.Length; i++)
@@ -767,9 +769,8 @@ namespace UShell.Commands
 
             Debug.Log(strBuilder.ToString());
 #endif
-            return true;
         }
-        private bool executeCursor(string[] args)
+        private void executeCursor(string[] args)
         {
             if (args.Length == 0)
             {
@@ -798,14 +799,13 @@ namespace UShell.Commands
                         Cursor.lockState = CursorLockMode.None;
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeWebcam(string[] args)
+        private void executeWebcam(string[] args)
         {
 #if !UNITY_STANDALONE_OSX
             string log = "";
@@ -816,12 +816,10 @@ namespace UShell.Commands
 
             Debug.Log(log);
 #endif
-            return true;
         }
-        private bool executeTier(string[] args)
+        private void executeTier(string[] args)
         {
             Debug.Log(Graphics.activeTier);
-            return true;
         }
 
 

@@ -728,16 +728,17 @@ namespace UShell
 
             try
             {
-                if (!cmd.Execute(label, fields))
-                {
-                    string log = string.Format(wrongSyntaxMessage, label);
+                cmd.Execute(label, fields);
+            }
+            catch (ArgumentException)
+            {
+                string log = string.Format(wrongSyntaxMessage, label);
 
-                    string[] syntaxes = cmd.GetSyntaxes(label);
-                    if (syntaxes != null && syntaxes.Length > 0)
-                        log += "\n" + label + " " + syntaxes[0];
+                string[] syntaxes = cmd.GetSyntaxes(label);
+                if (syntaxes != null && syntaxes.Length > 0)
+                    log += "\n" + label + " " + syntaxes[0];
 
-                    Debug.LogWarning(log);
-                }
+                Debug.LogWarning(log);
             }
             catch (FormatException e)
             {
@@ -1142,50 +1143,62 @@ namespace UShell
             return "";
         }
 
-        public bool Execute(string label, string[] args)
+        public void Execute(string label, string[] args)
         {
             switch (label)
             {
                 case "README":
-                    return executeREADME(args);
+                    executeREADME(args);
+                    break;
                 case "echo":
-                    return executeEcho(args);
+                    executeEcho(args);
+                    break;
                 case "alias":
-                    return executeAlias(args);
+                    executeAlias(args);
+                    break;
                 case "unalias":
-                    return executeUnalias(args);
+                    executeUnalias(args);
+                    break;
                 case "history":
-                    return executeHistory(args);
+                    executeHistory(args);
+                    break;
                 case "help":
-                    return executeHelp(args);
+                    executeHelp(args);
+                    break;
                 case "version":
-                    return executeVersion(args);
+                    executeVersion(args);
+                    break;
                 case "throw":
-                    return executeThrow(args);
+                    executeThrow(args);
+                    break;
                 case "type":
-                    return executeType(args);
+                    executeType(args);
+                    break;
                 case ".":
                 case "source":
-                    return executeSource(args);
+                    executeSource(args);
+                    break;
                 case "font":
-                    return executeFont(args);
+                    executeFont(args);
+                    break;
                 case "args":
-                    return executeArgs(args);
+                    executeArgs(args);
+                    break;
                 case "convar":
-                    return executeConvar(args);
+                    executeConvar(args);
+                    break;
                 case "reflex":
-                    return executeReflex(args);
+                    executeReflex(args);
+                    break;
             }
-
-            return true;
         }
 
-        private bool executeREADME(string[] args)
+        private void executeREADME(string[] args)
         {
             if (_readme == null || _readme.Length == 0)
             {
                 Debug.Log("README empty");
-                return true;
+                return;
             }
 
             if (args.Length == 0)
@@ -1210,15 +1223,13 @@ namespace UShell
                     Debug.LogWarning("the page does not exist");
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeEcho(string[] args)
+        private void executeEcho(string[] args)
         {
             Debug.Log(string.Join(" ", args));
-            return true;
         }
-        private bool executeAlias(string[] args)
+        private void executeAlias(string[] args)
         {
             if (args.Length == 0)
             {
@@ -1236,10 +1247,9 @@ namespace UShell
                     _aliases.Add(args[0], args[1]);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeUnalias(string[] args)
+        private void executeUnalias(string[] args)
         {
             if (args.Length == 1)
             {
@@ -1249,10 +1259,9 @@ namespace UShell
                     Debug.LogWarning("no entry for " + args[0]);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeHistory(string[] args)
+        private void executeHistory(string[] args)
         {
             if (args.Length == 0)
             {
@@ -1272,14 +1281,13 @@ namespace UShell
                         _history.Clear();
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeHelp(string[] args)
+        private void executeHelp(string[] args)
         {
             StringBuilder strBuilder = new StringBuilder();
             ICommand cmd;
@@ -1315,10 +1323,9 @@ namespace UShell
                     Debug.LogWarning(args[0] + ": unknown command");
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeVersion(string[] args)
+        private void executeVersion(string[] args)
         {
             Debug.Log(
                 "build   "   + Application.version +
@@ -1327,13 +1334,12 @@ namespace UShell
                 "\nclr     " + Environment.Version +
                 "\nos      " + SystemInfo.operatingSystem)
             ;
-            return true;
         }
-        private bool executeThrow(string[] args)
+        private void executeThrow(string[] args)
         {
             throw new Exception(string.Join(" ", args));
         }
-        private bool executeType(string[] args)
+        private void executeType(string[] args)
         {
             string log;
 
@@ -1357,10 +1363,9 @@ namespace UShell
                 Debug.Log(log);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeSource(string[] args)
+        private void executeSource(string[] args)
         {
             if (args.Length == 1)
             {
@@ -1382,10 +1387,9 @@ namespace UShell
                     Debug.LogWarning("the file does not exist");
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeFont(string[] args)
+        private void executeFont(string[] args)
         {
             //If we remove the font currently used, game over...
 
@@ -1438,7 +1442,7 @@ namespace UShell
                         deleteAllFonts();
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else if (args.Length == 2)
@@ -1466,23 +1470,21 @@ namespace UShell
                         }
                         break;
                     default:
-                        return false;
+                        throw new ArgumentException();
                 }
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
-        private bool executeArgs(string[] args)
+        private void executeArgs(string[] args)
         {
             StringBuilder log = new StringBuilder();
             for (int i = 0; i < args.Length; i++)
                 log.Append(string.Format("arg[{0}]: `{1}'\n", i, args[i]));
 
             Debug.Log(log);
-            return true;
         }
-        private bool executeConvar(string[] args)
+        private void executeConvar(string[] args)
         {
             StringBuilder log = new StringBuilder();
             log.Append("convars: " + _convars.Count);
@@ -1512,9 +1514,8 @@ namespace UShell
             }
 
             Debug.Log(log.ToString());
-            return true;
         }
-        private bool executeReflex(string[] args)
+        private void executeReflex(string[] args)
         {
             if (args.Length == 0)
             {
@@ -1543,8 +1544,7 @@ namespace UShell
                 Debug.Log(strBuilder);
             }
             else
-                return false;
-            return true;
+                throw new ArgumentException();
         }
 
         private void getHelp(StringBuilder strBuilder, Dictionary<string, ICommand> cmds, bool isBuiltin)
@@ -1935,7 +1935,7 @@ namespace UShell
         string[] GetInfos(string label);
         string GetCompletion(string label, string[] args, out List<string> options);
 
-        bool Execute(string label, string[] args);
+        void Execute(string label, string[] args);
     }
 
     public class Log
