@@ -52,11 +52,20 @@ namespace UShell
         const string parseError = "cannot parse '{0}' to {1}";
 
         #region COMPLETION
-        public static string GetCompletion(string prefix, bool endWithBlank, out List<string> options, params IEnumerable<string>[] lexicon)
+        public static string GetCompletion(ref string prefix, bool testForEquality, out List<string> options, params IEnumerable<string>[] lexicon)
+        {
+            string result = GetCompletion(prefix, testForEquality, out options, lexicon);
+            if (testForEquality)
+                prefix += result;
+            else if (result.Length > 0)
+                prefix += result.Substring(0, result.Length - 1);
+            return result;
+        }
+        public static string GetCompletion(string prefix, bool testForEquality, out List<string> options, params IEnumerable<string>[] lexicon)
         {
             options = new List<string>();
 
-            if (endWithBlank)
+            if (testForEquality)
             {
                 for (int i = 0; i < lexicon.Length; i++)
                 {
@@ -76,7 +85,7 @@ namespace UShell
             if (options.Count == 0)
                 return "";
             else if (options.Count == 1)
-                return options[0].Remove(0, prefix.Length);
+                return options[0].Remove(0, prefix.Length) + (testForEquality ? "" : " ");
             else
                 return GetLongestCommonPrefix(options).Remove(0, prefix.Length);
         }

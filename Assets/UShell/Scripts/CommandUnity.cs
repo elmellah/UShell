@@ -265,20 +265,16 @@ namespace UShell.Commands
             }
             return new string[0];
         }
-        public string GetCompletion(string label, string[] args, bool endWithBlank, out List<string> options)
+        public string GetCompletion(string label, string[] args, out List<string> options)
         {
             if (label == "lds")
             {
-                string arg = args.Length == 1 ? args[0] : "";
-                if (args.Length == 0 || args.Length == 1)
-                {
-                    int sceneCount = SceneManager.sceneCountInBuildSettings;
-                    string[] scenes = new string[sceneCount];
-                    for (int i = 0; i < sceneCount; i++)
-                        scenes[i] = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
+                int sceneCount = SceneManager.sceneCountInBuildSettings;
+                string[] scenes = new string[sceneCount];
+                for (int i = 0; i < sceneCount; i++)
+                    scenes[i] = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
 
-                    return Utils.GetCompletion(arg, endWithBlank, out options, scenes);
-                }
+                return Utils.GetCompletion(args[0], args.Length > 1, out options, scenes);
             }
 
             options = new List<string>();

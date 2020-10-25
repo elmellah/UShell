@@ -449,8 +449,9 @@ namespace UShell
 
             string label = "";
             bool bypassAliases = false;
-            bool endWithBlank = prefix.EndsWith(_blankCharacters); //Not correct if quotation is used
             List<Token> tokens = Utils.Tokenize(prefix, _operators, false);
+            if (prefix.EndsWith(_blankCharacters)) //Not correct if quotation is used
+                tokens.Add(new Token(Token.Type.WORD, ""));
             if (tokens.Count > 0)
             {
                 List<List<Token>> cmds = Utils.Split(tokens, _operators);
@@ -464,7 +465,7 @@ namespace UShell
                 }
             }
 
-            if (tokens.Count > 1 || endWithBlank)
+            if (tokens.Count > 1)
             {
                 options = new List<string>();
                 if ((!bypassAliases && _aliases.ContainsKey(label)) || _builtinCmds.ContainsKey(label) || _cmds.ContainsKey(label) || _convars.ContainsKey(label) || _methods.ContainsKey(label))
@@ -502,17 +503,14 @@ namespace UShell
                 }
                 else if (_builtinCmds.TryGetValue(labelFound, out ICommand cmd) || _cmds.TryGetValue(labelFound, out cmd))
                 {
-                    string[] args = Utils.ExtractArguments(tokens);
-                    string completion = labelFound.Remove(0, label.Length) + cmd.GetCompletion(labelFound, args, args.Length == 0 ? false : endWithBlank, out options);
-                    if ((options.Count == 1 || args.Length <= 0) && !endWithBlank)
-                        return completion + " ";
-                    return completion;
+                    string[] args = tokens.Count > 1 ? Utils.ExtractArguments(tokens) : new string[] { "" };
+                    return labelFound.Remove(0, label.Length) + (tokens.Count > 1 ? "" : " ") + cmd.GetCompletion(labelFound, args, out options);
                 }
                 else
                 {
-                    if (!endWithBlank)
-                        return labelFound.Remove(0, label.Length) + " ";
-                    return labelFound.Remove(0, label.Length);
+                    if (tokens.Count > 1)
+                        return "";
+                    return labelFound.Remove(0, label.Length) + " ";
                 }
             }
             else
@@ -1131,19 +1129,14 @@ namespace UShell
             }
             return new string[0];
         }
-        public string GetCompletion(string label, string[] args, bool endWithBlank, out List<string> options)
+        public string GetCompletion(string label, string[] args, out List<string> options)
         {
-            string arg = args.Length == 1 ? args[0] : "";
-                
-            if (args.Length == 0 || args.Length == 1)
-            {
-                if (label == "help")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys, _cmds.Keys, _methods.Keys);
-                else if (label == "type")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _builtinCmds.Keys, _cmds.Keys, _aliases.Keys, _convars.Keys, _methods.Keys);
-                else if (label == "unalias")
-                    return Utils.GetCompletion(arg, endWithBlank, out options, _aliases.Keys);
-            }
+            if (label == "help")
+                return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, _builtinCmds.Keys, _cmds.Keys, _methods.Keys);
+            else if (label == "type")
+                return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, _builtinCmds.Keys, _cmds.Keys, _aliases.Keys, _convars.Keys, _methods.Keys);
+            else if (label == "unalias")
+                return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, _aliases.Keys);
 
             options = new List<string>();
             return "";
@@ -1940,7 +1933,7 @@ namespace UShell
     {
         string[] GetSyntaxes(string label);
         string[] GetInfos(string label);
-        string GetCompletion(string label, string[] args, bool endWithBlank, out List<string> options);
+        string GetCompletion(string label, string[] args, out List<string> options);
 
         bool Execute(string label, string[] args);
     }
