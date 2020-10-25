@@ -837,46 +837,44 @@ namespace UShell
                     return;
                 }
                 
-                if (parameters.Length == fields.Length)
+                object[] args = new object[fields.Length];
+                for (int j = 0; j < args.Length; j++)
                 {
-                    object[] args = new object[fields.Length];
-                    for (int j = 0; j < args.Length; j++)
-                    {
-                        TypeConverter converter = TypeDescriptor.GetConverter(parameters[j].ParameterType);
-
-                        try
-                        {
-                            args[j] = Utils.ConvertFromString(converter, fields[j]);
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogWarning(string.Format(exception, label, e.Message));
-                            return;
-                        }
-                    }
+                    TypeConverter converter = TypeDescriptor.GetConverter(parameters[j].ParameterType);
 
                     try
                     {
-                        object returnValue = null;
-                        for (int j = 0; j < instances.Count; j++)
-                            returnValue = methodInfos[i].Invoke(instances[j], args);
-
-                        if (returnValue != null)
-                            Debug.Log(Utils.ConvertToString(returnValue));
+                        args[j] = Utils.ConvertFromString(converter, fields[j]);
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError(string.Format(exception, label, e.Message));
+                        Debug.LogWarning(string.Format(exception, label, e.Message));
                         return;
                     }
                 }
-                else
-                    Debug.LogWarning(string.Format(wrongSyntax, label));
+
+                try
+                {
+                    object returnValue = null;
+                    for (int j = 0; j < instances.Count; j++)
+                        returnValue = methodInfos[i].Invoke(instances[j], args);
+
+                    if (returnValue != null)
+                        Debug.Log(Utils.ConvertToString(returnValue));
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(string.Format(exception, label, e.Message));
+                    return;
+                }
 
                 return;
             }
 
-            Debug.LogWarning(string.Format(wrongSyntax, label));
+            StringBuilder strBuilder = new StringBuilder();
+            strBuilder.AppendLine(string.Format(wrongSyntax, label));
+            getHelpFromLabel(strBuilder, methodInfos, label);
+            Debug.LogWarning(strBuilder);
         }
 
         private void findAndRegisterMembers()
