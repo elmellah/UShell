@@ -1639,7 +1639,11 @@ namespace UShell
                     else if (parameterInfos[i].ParameterType.IsByRef && !parameterInfos[i].IsIn)
                         strBuilder.Append("[ref]");
 
-                    strBuilder.Append(parameterInfos[i].Name);
+                    strBuilder.Append(parameterInfos[i].Name + ":");
+                    if (parameterInfos[i].ParameterType.IsByRef)
+                        strBuilder.Append(parameterInfos[i].ParameterType.GetElementType().Name);
+                    else
+                        strBuilder.Append(parameterInfos[i].ParameterType.Name);
                 }
 
                 string info = method.Info;
