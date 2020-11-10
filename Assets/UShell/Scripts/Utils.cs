@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 
 namespace UShell
 {
@@ -347,6 +348,27 @@ namespace UShell
 
             result = Rect.zero;
             return false;
+        }
+        public static void TryParseArray(string s, out object result, Type T)
+        {
+            MethodInfo method = typeof(Utils).GetMethod(nameof(Utils.TryParseArrayGeneric)).MakeGenericMethod(T);
+            object[] parameters = new object[] { s, null };
+            method.Invoke(null, parameters);
+            result = parameters[1];
+        }
+        public static void TryParseArrayGeneric<T>(string s, out T[] result)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                result = new T[0];
+                return;
+            }
+
+            string[] elements = s.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            result = new T[elements.Length];
+            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+            for (int i = 0; i < elements.Length; i++)
+                result[i] = (T)ConvertFromString(converter, elements[i]);
         }
 
 

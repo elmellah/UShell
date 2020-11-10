@@ -806,12 +806,22 @@ namespace UShell
             {
                 if (convarCmd.CanWrite)
                 {
-                    TypeConverter converter = TypeDescriptor.GetConverter(convarCmd.Type);
                     try
                     {
-                        object value = Utils.ConvertFromString(converter, fields[0]);
-                        for (int i = 0; i < instances.Count; i++)
-                            convarCmd.SetValue(instances[i], value);
+                        if (convarCmd.Type.IsArray)
+                        {
+                            Type T = convarCmd.Type.GetElementType();
+                            Utils.TryParseArray(fields[0], out object result, T);
+                            for (int i = 0; i < instances.Count; i++)
+                                convarCmd.SetValue(instances[i], result);
+                        }
+                        else
+                        {
+                            TypeConverter converter = TypeDescriptor.GetConverter(convarCmd.Type);
+                            object value = Utils.ConvertFromString(converter, fields[0]);
+                            for (int i = 0; i < instances.Count; i++)
+                                convarCmd.SetValue(instances[i], value);
+                        }
                     }
                     catch (Exception e)
                     {
