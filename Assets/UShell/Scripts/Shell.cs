@@ -861,10 +861,20 @@ namespace UShell
                 object[] args = new object[fields.Length];
                 for (int j = 0; j < args.Length; j++)
                 {
-                    TypeConverter converter = TypeDescriptor.GetConverter(parameters[j].ParameterType);
+                    if (parameters[j].IsOut)
+                        continue;
+
+                    Type paramType = parameters[j].ParameterType.IsByRef ? parameters[j].ParameterType.GetElementType() : parameters[j].ParameterType;
+                    string fieldValue;
+                    if (parameters[j].ParameterType.IsByRef && !parameters[j].IsIn)
+                        fieldValue = getVariableValue(fields[j]);
+                    else
+                        fieldValue = fields[j];
+
+                    TypeConverter converter = TypeDescriptor.GetConverter(paramType);
                     try
                     {
-                        args[j] = Utils.ConvertFromString(converter, fields[j]);
+                        args[j] = Utils.ConvertFromString(converter, fieldValue);
                     }
                     catch (Exception e)
                     {
@@ -878,6 +888,12 @@ namespace UShell
                     object returnValue = null;
                     for (int j = 0; j < instances.Count; j++)
                         returnValue = methodCmds[i].Invoke(instances[j], args);
+
+                    for (int j = 0; j < args.Length; j++)
+                    {
+                        if (parameters[j].ParameterType.IsByRef && !parameters[j].IsIn)
+                            setVariableValue(fields[j], args[j].ToString());
+                    }
 
                     if (returnValue != null)
                         Debug.Log(Utils.ConvertToString(returnValue));
@@ -1616,7 +1632,15 @@ namespace UShell
 
                 ParameterInfo[] parameterInfos = method.Parameters;
                 for (int i = 0; i < parameterInfos.Length; i++)
-                    strBuilder.Append(" " + parameterInfos[i].Name);
+                {
+                    strBuilder.Append(" ");
+                    if (parameterInfos[i].IsOut)
+                        strBuilder.Append("[out]");
+                    else if (parameterInfos[i].ParameterType.IsByRef && !parameterInfos[i].IsIn)
+                        strBuilder.Append("[ref]");
+
+                    strBuilder.Append(parameterInfos[i].Name);
+                }
 
                 string info = method.Info;
                 if (!string.IsNullOrEmpty(info))
@@ -1896,34 +1920,8 @@ namespace UShell
             public Type ReturnType { get => _method.ReturnType; }
             public Type DeclaringType { get => _method.DeclaringType; }
             public bool IsStatic { get => _method.IsStatic; }
-            public int ParametersCount
-            {
-                get
-                {
-                    int count = 0;
-                    foreach (var param in _parameters)
-                    {
-                        if (!param.IsOut)
-                            count++;
-                    }
-
-                    return count;
-                }
-            }
-            public ParameterInfo[] Parameters
-            {
-                get
-                {
-                    List<ParameterInfo> parameters = new List<ParameterInfo>();
-                    foreach (var param in _parameters)
-                    {
-                        if (!param.IsOut)
-                            parameters.Add(param);
-                    }
-
-                    return parameters.ToArray();
-                }
-            }
+            public int ParametersCount { get { return _parameters.Length; } }
+            public ParameterInfo[] Parameters { get { return _parameters; } }
 
             public string Name
             {
@@ -1957,17 +1955,7 @@ namespace UShell
 
             public object Invoke(object obj, object[] parameters)
             {
-                object[] allParameters = new object[_parameters.Length];
-                for (int i = 0, j = 0; i < _parameters.Length; i++)
-                {
-                    if (!_parameters[i].IsOut)
-                    {
-                        allParameters[i] = parameters[j];
-                        j++;
-                    }
-                }
-
-                return _method.Invoke(obj, allParameters);
+                return _method.Invoke(obj, parameters);
             }
         }
         #endregion
