@@ -114,7 +114,7 @@ namespace UShell
         private Dictionary<string, ICommand> _builtinCmds = new Dictionary<string, ICommand>();
         private Dictionary<string, string> _aliases = new Dictionary<string, string>();
         private Dictionary<string, ConvarCmd> _convars = new Dictionary<string, ConvarCmd>();
-        private Dictionary<string, List<MethodInfo>> _methods = new Dictionary<string, List<MethodInfo>>();
+        private Dictionary<string, List<MethodCmd>> _methods = new Dictionary<string, List<MethodCmd>>();
         private Dictionary<Type, List<object>> _instances = new Dictionary<Type, List<object>>();
         private Dictionary<string, string> _variables = new Dictionary<string, string>();
 
@@ -668,8 +668,8 @@ namespace UShell
                 processICmd(source, cmd, label, fields);
             else if (_convars.TryGetValue(label, out ConvarCmd convarCmd))
                 processConvar(source, convarCmd, label, fields);
-            else if (_methods.TryGetValue(label, out List<MethodInfo> methodInfos))
-                processMethod(source, methodInfos, label, fields);
+            else if (_methods.TryGetValue(label, out List<MethodCmd> methodCmds))
+                processMethod(source, methodCmds, label, fields);
             else
             {
                 StringBuilder log = new StringBuilder(string.Format(unknownMessage, label));
@@ -824,27 +824,27 @@ namespace UShell
             else
                 Debug.LogWarning(string.Format(tooManyArgs, label));
         }
-        private void processMethod(string source, List<MethodInfo> methodInfos, string label, string[] fields)
+        private void processMethod(string source, List<MethodCmd> methodCmds, string label, string[] fields)
         {
             const string noInstances = "shell: {0}: no instances registered for {1}";
             const string wrongSyntax = "shell: {0}: wrongSyntax";
             const string exception = "shell: {0}: {1}";
 
-            for (int i = 0; i < methodInfos.Count; i++)
+            for (int i = 0; i < methodCmds.Count; i++)
             {
-                ParameterInfo[] parameters = methodInfos[i].GetParameters();
+                ParameterInfo[] parameters = methodCmds[i].Parameters;
                 if (parameters.Length != fields.Length)
                     continue;
 
                 List<object> instances;
-                if (methodInfos[i].IsStatic)
+                if (methodCmds[i].IsStatic)
                 {
                     instances = new List<object>();
                     instances.Add(null);
                 }
-                else if (!_instances.TryGetValue(methodInfos[i].DeclaringType, out instances))
+                else if (!_instances.TryGetValue(methodCmds[i].DeclaringType, out instances))
                 {
-                    Debug.LogWarning(string.Format(noInstances, label, methodInfos[i].DeclaringType));
+                    Debug.LogWarning(string.Format(noInstances, label, methodCmds[i].DeclaringType));
                     return;
                 }
                 
@@ -867,7 +867,7 @@ namespace UShell
                 {
                     object returnValue = null;
                     for (int j = 0; j < instances.Count; j++)
-                        returnValue = methodInfos[i].Invoke(instances[j], args);
+                        returnValue = methodCmds[i].Invoke(instances[j], args);
 
                     if (returnValue != null)
                         Debug.Log(Utils.ConvertToString(returnValue));
@@ -883,7 +883,7 @@ namespace UShell
 
             StringBuilder strBuilder = new StringBuilder();
             strBuilder.AppendLine(string.Format(wrongSyntax, label));
-            getHelpFromLabel(strBuilder, methodInfos, label);
+            getHelpFromLabel(strBuilder, methodCmds, label);
             Debug.LogWarning(strBuilder);
         }
 
@@ -952,7 +952,7 @@ namespace UShell
                 MethodInfo[] methodInfos = types[i].GetMethods(_bindingFlags);
                 for (int j = 0; j < methodInfos.Length; j++)
                     if (Attribute.IsDefined(methodInfos[j], typeof(Cmd), false))
-                        registerMethod(methodInfos[j]);
+                        registerMethod(new MethodCmd(methodInfos[j]));
             }
         }
         private void registerConvar(ConvarCmd convarCmd)
@@ -967,27 +967,18 @@ namespace UShell
                     _convars.Add(label, convarCmd);
             }
         }
-        private void registerMethod(MethodInfo methodInfo)
+        private void registerMethod(MethodCmd methodCmd)
         {
-            Cmd cmd = methodInfo.GetCustomAttribute<Cmd>();
-
-            string label;
-            if (!string.IsNullOrEmpty(cmd.Label))
-                label = cmd.Label;
-            else
-                label =  methodInfo.Name;
-
+            string label = methodCmd.Name;
             if (!_methods.ContainsKey(label))
-            {
-                _methods.Add(label, new List<MethodInfo>() { methodInfo });
-            }
+                _methods.Add(label, new List<MethodCmd>() { methodCmd });
             else
             {
                 for (int i = 0; i < _methods[label].Count; i++)
-                    if (methodInfo.GetParameters().Length == _methods[label][i].GetParameters().Length || methodInfo.DeclaringType != _methods[label][i].DeclaringType)
+                    if (methodCmd.ParametersCount == _methods[label][i].ParametersCount || methodCmd.DeclaringType != _methods[label][i].DeclaringType)
                         return;
 
-                _methods[label].Add(methodInfo);
+                _methods[label].Add(methodCmd);
             }
         }
 
@@ -1299,7 +1290,7 @@ namespace UShell
         {
             StringBuilder strBuilder = new StringBuilder();
             ICommand cmd;
-            List<MethodInfo> methods;
+            List<MethodCmd> methods;
 
             if (args.Length == 0)
             {
@@ -1357,9 +1348,9 @@ namespace UShell
                     log = "alias";
                 else if (args[0][0] == ':')
                     log = "event";
-                else if(_builtinCmds.ContainsKey(args[0]))
+                else if (_builtinCmds.ContainsKey(args[0]))
                     log = "builtin";
-                else if(_cmds.ContainsKey(args[0]))
+                else if (_cmds.ContainsKey(args[0]))
                     log = "regular";
                 else if (_convars.ContainsKey(args[0]))
                     log = "convar";
@@ -1573,9 +1564,9 @@ namespace UShell
                     strBuilder.Append(" ").Append(syntaxes[0]);
             }
         }
-        private void getHelp(StringBuilder strBuilder, Dictionary<string, List<MethodInfo>> methods)
+        private void getHelp(StringBuilder strBuilder, Dictionary<string, List<MethodCmd>> methods)
         {
-            foreach (KeyValuePair<string, List<MethodInfo>> methodList in methods)
+            foreach (KeyValuePair<string, List<MethodCmd>> methodList in methods)
             {
                 strBuilder.Append("\n\t- ");
                 strBuilder.Append(methodList.Key);
@@ -1607,17 +1598,17 @@ namespace UShell
                 }
             }
         }
-        private void getHelpFromLabel(StringBuilder strBuilder, List<MethodInfo> methods, string label)
+        private void getHelpFromLabel(StringBuilder strBuilder, List<MethodCmd> methods, string label)
         {
-            foreach (MethodInfo method in methods)
+            foreach (MethodCmd method in methods)
             {
                 strBuilder.Append(label);
 
-                ParameterInfo[] parameterInfos = method.GetParameters();
+                ParameterInfo[] parameterInfos = method.Parameters;
                 for (int i = 0; i < parameterInfos.Length; i++)
                     strBuilder.Append(" " + parameterInfos[i].Name);
 
-                string info = method.GetCustomAttribute<Cmd>().Info;
+                string info = method.Info;
                 if (!string.IsNullOrEmpty(info))
                     strBuilder.Append(": " + info);
 
@@ -1884,6 +1875,89 @@ namespace UShell
                     _fieldInfo.SetValue(obj, value);
                 else if (IsProperty)
                     _propertyInfo.SetValue(obj, value);
+            }
+        }
+        private struct MethodCmd
+        {
+            private MethodInfo _method;
+            private ParameterInfo[] _parameters;
+
+
+            public Type ReturnType { get => _method.ReturnType; }
+            public Type DeclaringType { get => _method.DeclaringType; }
+            public bool IsStatic { get => _method.IsStatic; }
+            public int ParametersCount
+            {
+                get
+                {
+                    int count = 0;
+                    foreach (var param in _parameters)
+                    {
+                        if (!param.IsOut)
+                            count++;
+                    }
+
+                    return count;
+                }
+            }
+            public ParameterInfo[] Parameters
+            {
+                get
+                {
+                    List<ParameterInfo> parameters = new List<ParameterInfo>();
+                    foreach (var param in _parameters)
+                    {
+                        if (!param.IsOut)
+                            parameters.Add(param);
+                    }
+
+                    return parameters.ToArray();
+                }
+            }
+
+            public string Name
+            {
+                get
+                {
+                    Cmd cmd = _method.GetCustomAttribute<Cmd>();
+                    if (cmd != null && !string.IsNullOrEmpty(cmd.Label))
+                        return cmd.Label;
+
+                    return _method.Name;
+                }
+            }
+            public string Info
+            {
+                get
+                {
+                    Cmd cmd = _method.GetCustomAttribute<Cmd>();
+                    if (cmd != null && !string.IsNullOrEmpty(cmd.Info))
+                        return cmd.Info;
+
+                    return "";
+                }
+            }
+
+
+            public MethodCmd(MethodInfo methodInfo)
+            {
+                _method = methodInfo;
+                _parameters = _method.GetParameters();
+            }
+
+            public object Invoke(object obj, object[] parameters)
+            {
+                object[] allParameters = new object[_parameters.Length];
+                for (int i = 0, j = 0; i < _parameters.Length; i++)
+                {
+                    if (!_parameters[i].IsOut)
+                    {
+                        allParameters[i] = parameters[j];
+                        j++;
+                    }
+                }
+
+                return _method.Invoke(obj, allParameters);
             }
         }
         #endregion
