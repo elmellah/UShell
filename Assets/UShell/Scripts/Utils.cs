@@ -176,16 +176,22 @@ namespace UShell
             }
             stringBuilder.Append('\t', depth).Append("}");
         }
-        
-        public static object ConvertFromString(TypeConverter converter, string input)
+
+        public static object ConvertFromString(string input, Type T)
+        {
+            MethodInfo method = typeof(Utils).GetMethod(nameof(Utils.ConvertFromStringGeneric)).MakeGenericMethod(T);
+            return method.Invoke(null, new [] { input });
+        }
+        public static T ConvertFromStringGeneric<T>(string input)
         {
             const string invalidValue = "invalid value";
             const string cannotConvert = "no converter available";
 
+            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter.CanConvertFrom(typeof(string)))
             {
                 if (converter.IsValid(input))
-                    return converter.ConvertFromInvariantString(input);
+                    return (T)converter.ConvertFromInvariantString(input);
                 else
                     throw new FormatException(invalidValue);
             }
@@ -366,9 +372,8 @@ namespace UShell
 
             string[] elements = s.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
             result = new T[elements.Length];
-            TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
             for (int i = 0; i < elements.Length; i++)
-                result[i] = (T)ConvertFromString(converter, elements[i]);
+                result[i] = ConvertFromStringGeneric<T>(elements[i]);
         }
 
 

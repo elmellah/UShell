@@ -279,7 +279,7 @@ namespace UShell.Consoles
         public void AddLog(Log log)
         {
             if (_pipeOut != null && _pipeOut.IsOpened)
-                _pipeOut.Send(log.log);
+                _pipeOut.Send(log.Value);
         }
         public bool ProcessEvent(string label, string[] args)
         {

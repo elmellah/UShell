@@ -1,12 +1,11 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System;
-using System.Text;
-using System.IO;
-using System.Reflection;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace UShell
@@ -16,7 +15,7 @@ namespace UShell
         #region FIELDS
         private static Shell _sh;
 
-        private static readonly string[] _readme = new string[]
+        private static readonly string[] _readme =
 {
 @"    type 'help' to display the list of all registered commands
     type 'convar' to display the list of all convars
@@ -34,11 +33,11 @@ namespace UShell
             new Token(Token.Type.SEPARATOR, ";"),
         };
         private static readonly char[] _blankCharacters =
-{
+        {
             ' ',
             '\t',
         };
-        private static string[] _builtinLabels = new string[]
+        private static string[] _builtinLabels =
         {
             "README",
             "help",
@@ -57,7 +56,7 @@ namespace UShell
             "reflex",
         };
         [Convar("converters", "the shell converters", true)]
-        private static Tuple<Type, Type>[] _converters = new Tuple<Type, Type>[]
+        private static Tuple<Type, Type>[] _converters =
         {
             new Tuple<Type, Type>(typeof(Vector2), typeof(Converters.Vector2Converter)),
             new Tuple<Type, Type>(typeof(Vector3), typeof(Converters.Vector3Converter)),
@@ -67,7 +66,7 @@ namespace UShell
             new Tuple<Type, Type>(typeof(Color32), typeof(Converters.Color32Converter)),
             new Tuple<Type, Type>(typeof(Rect), typeof(Converters.RectConverter)),
         };
-        private static Type[] _excludedTypes = new Type[]
+        private static Type[] _excludedTypes =
         {
             typeof(object),
             typeof(MonoBehaviour),
@@ -92,7 +91,7 @@ namespace UShell
         [SerializeField]
         private bool _dontDestroyOnLoad = true;
         [SerializeField]
-        private string[] _excludedAssemblies = new string[]
+        private string[] _excludedAssemblies =
         {
                 "mscorlib",
                 "System",
@@ -293,16 +292,7 @@ namespace UShell
         #endregion
 
         #region METHODS
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="cmdLine"></param>
-        public void ProcessCmdLine(string source, string cmdLine)
-        {
-            processCmdLine(source, cmdLine, true);
-        }
-
+        #region REGISTRATION
         /// <summary>
         /// 
         /// </summary>
@@ -310,15 +300,18 @@ namespace UShell
         /// <param name="console"></param>
         public void RegisterConsole(string id, IConsole console)
         {
-            if (id == null || console == null) {
+            if (id == null || console == null)
+            {
                 console.AddLog(new Log(LogType.Error, "shell: cannot register console (id or console null)", String.Empty));
                 return;
             }
-            if (_consoles.ContainsKey(id)) {
+            if (_consoles.ContainsKey(id))
+            {
                 console.AddLog(new Log(LogType.Error, "shell: cannot register console (id already used)", String.Empty));
                 return;
             }
-            if (_consoles.ContainsValue(console)) {
+            if (_consoles.ContainsValue(console))
+            {
                 console.AddLog(new Log(LogType.Error, "shell: cannot register console (console already registered)", String.Empty));
                 return;
             }
@@ -334,7 +327,8 @@ namespace UShell
         /// <returns></returns>
         public bool UnregisterConsole(string id, IConsole console)
         {
-            if (id == null || console == null) {
+            if (id == null || console == null)
+            {
                 console.AddLog(new Log(LogType.Error, "shell: cannot unregister console (id or console null)", String.Empty));
                 return false;
             }
@@ -348,11 +342,13 @@ namespace UShell
         /// <param name="command"></param>
         public void RegisterCmd(string id, ICommand command)
         {
-            if (id == null || command == null) {
+            if (id == null || command == null)
+            {
                 Debug.LogError("shell: cannot register command (id or command null)");
                 return;
             }
-            if (_cmds.ContainsKey(id)) {
+            if (_cmds.ContainsKey(id))
+            {
                 Debug.LogError("shell: cannot register command \"" + id + "\" (id already used)");
                 return;
             }
@@ -367,7 +363,8 @@ namespace UShell
         /// <returns></returns>
         public bool UnregisterCmd(string id, ICommand command)
         {
-            if (id == null || command == null) {
+            if (id == null || command == null)
+            {
                 Debug.LogError("shell: cannot unregister command (id or command null)");
                 return false;
             }
@@ -381,7 +378,8 @@ namespace UShell
         /// <param name="instance"></param>
         public void RegisterInstance(object instance)
         {
-            if (instance == null) {
+            if (instance == null)
+            {
                 Debug.LogError("shell: cannot register instance (instance null)");
                 return;
             }
@@ -405,7 +403,8 @@ namespace UShell
         /// <returns></returns>
         public bool UnregisterInstance(object instance)
         {
-            if (instance == null) {
+            if (instance == null)
+            {
                 Debug.LogError("shell: cannot unregister instance (instance null)");
                 return false;
             }
@@ -428,164 +427,111 @@ namespace UShell
             return result;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="index">The less the more recent</param>
-        /// <returns></returns>
-        public string GetCmdLineFromHistory(int index)
+        private void findAndRegisterMembers()
         {
-            return _history.GetValue(index);
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="prefix"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
-        public string GetCompletion(string prefix, out List<string> options)
-        {
-            //Potential variable assignments are not taken into account
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
-            string label = "";
-            bool bypassAliases = false;
-            List<Token> tokens = Utils.Tokenize(prefix, _operators, false);
-            if (prefix.EndsWith(_blankCharacters)) //Not correct if quotation is used
-                tokens.Add(new Token(Token.Type.WORD, ""));
-            if (tokens.Count > 0)
+            //Make the shell assembly tested before the others
+            Assembly executingAssembly = Assembly.GetExecutingAssembly();
+            for (int i = 0; i < assemblies.Length; i++)
             {
-                List<List<Token>> cmds = Utils.Split(tokens, _operators);
-                if (cmds.Count > 0)
+                if (assemblies[i] == executingAssembly)
                 {
-                    tokens = cmds[cmds.Count - 1];
-                    string quotedLabel = tokens[0].value;
-                    Utils.RemoveQuoting(tokens);
-                    label = tokens[0].value;
-                    bypassAliases = quotedLabel != label;
+                    Assembly tmp = assemblies[i];
+                    assemblies[i] = assemblies[0];
+                    assemblies[0] = tmp;
+                    break;
                 }
             }
 
-            if (tokens.Count > 1)
+            //Make the shell type tested before the others
+            Type[] executingTypes = executingAssembly.GetTypes();
+            for (int i = 0; i < executingTypes.Length; i++)
             {
-                options = new List<string>();
-                if ((!bypassAliases && _aliases.ContainsKey(label)) || _builtinCmds.ContainsKey(label) || _cmds.ContainsKey(label) || _convars.ContainsKey(label) || _methods.ContainsKey(label))
-                    options.Add(label);
-                else
-                    return "";
+                if (executingTypes[i] == typeof(Shell))
+                {
+                    Type tmp = executingTypes[i];
+                    executingTypes[i] = executingTypes[0];
+                    executingTypes[0] = tmp;
+                    break;
+                }
             }
+
+            registerMembersFromTypes(executingTypes);
+            for (int i = 1; i < assemblies.Length; i++)
+            {
+                bool isException = false;
+                Assembly assembly = assemblies[i];
+                for (int j = 0; j < _excludedAssemblies.Length; j++)
+                {
+                    if (assembly.FullName.StartsWith(_excludedAssemblies[j], StringComparison.InvariantCulture))
+                    {
+                        isException = true;
+                        break;
+                    }
+                }
+
+                if (!isException)
+                    registerMembersFromTypes(assemblies[i].GetTypes());
+            }
+        }
+        private void registerMembersFromTypes(Type[] types)
+        {
+            for (int i = 0; i < types.Length; i++)
+            {
+                FieldInfo[] fieldInfos = types[i].GetFields(_bindingFlags);
+                for (int j = 0; j < fieldInfos.Length; j++)
+                    if (Attribute.IsDefined(fieldInfos[j], typeof(ConvarAttribute), false))
+                        registerConvar(new ConvarCmd(fieldInfos[j]));
+
+                PropertyInfo[] propertyInfos = types[i].GetProperties(_bindingFlags);
+                for (int j = 0; j < propertyInfos.Length; j++)
+                    if (Attribute.IsDefined(propertyInfos[j], typeof(ConvarAttribute), false))
+                        registerConvar(new ConvarCmd(propertyInfos[j]));
+
+                MethodInfo[] methodInfos = types[i].GetMethods(_bindingFlags);
+                for (int j = 0; j < methodInfos.Length; j++)
+                    if (Attribute.IsDefined(methodInfos[j], typeof(CmdAttribute), false))
+                        registerMethod(new MethodCmd(methodInfos[j]));
+            }
+        }
+        private void registerConvar(ConvarCmd convarCmd)
+        {
+            string label = convarCmd.Name;
+            if (!_convars.ContainsKey(label))
+                _convars.Add(label, convarCmd);
             else
             {
-                options = Utils.GetWordsThatStartWith(label, false,
-                    _builtinCmds.Keys,
-                    _cmds.Keys,
-                    _convars.Keys,
-                    _methods.Keys);
-
-                if (!bypassAliases)
-                    options.AddRange(Utils.GetWordsThatStartWith(label, false, _aliases.Keys));
+                label = convarCmd.DeclaringType + "." + convarCmd.Name;
+                if (!_convars.ContainsKey(label))
+                    _convars.Add(label, convarCmd);
             }
-
-            if (options.Count == 0)
-            {
-                return "";
-            }
-            else if (options.Count == 1)
-            {
-                string labelFound = options[0];
-                if (!bypassAliases && !_usedAliases.Contains(labelFound) && _aliases.TryGetValue(labelFound, out string aliasValue))
-                {
-                    _usedAliases.Push(labelFound);
-                    prefix = prefix.ReplaceFirst(label, aliasValue);
-                    string completion = labelFound.Remove(0, label.Length) + GetCompletion(prefix, out options);
-                    _usedAliases.Pop();
-
-                    return completion;
-                }
-                else if (_builtinCmds.TryGetValue(labelFound, out ICommand cmd) || _cmds.TryGetValue(labelFound, out cmd))
-                {
-                    string[] args = tokens.Count > 1 ? Utils.ExtractArguments(tokens) : new string[] { "" };
-                    return labelFound.Remove(0, label.Length) + (tokens.Count > 1 ? "" : " ") + cmd.GetCompletion(labelFound, args, out options);
-                }
-                else
-                {
-                    if (tokens.Count > 1)
-                        return "";
-                    return labelFound.Remove(0, label.Length) + " ";
-                }
-            }
+        }
+        private void registerMethod(MethodCmd methodCmd)
+        {
+            string label = methodCmd.Name;
+            if (!_methods.ContainsKey(label))
+                _methods.Add(label, new List<MethodCmd>() { methodCmd });
             else
-                return Utils.GetLongestCommonPrefix(options).Remove(0, label.Length);
+            {
+                for (int i = 0; i < _methods[label].Count; i++)
+                    if (methodCmd.ParametersCount == _methods[label][i].ParametersCount || methodCmd.DeclaringType != _methods[label][i].DeclaringType)
+                        return;
+
+                _methods[label].Add(methodCmd);
+            }
         }
+        #endregion
+
+        #region COMMAND PROCESSING
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="input"></param>
-        /// <param name="maxDistance"></param>
-        /// <returns></returns>
-        public List<string> GetSimilarCmds(string input, int maxDistance)
+        /// <param name="source"></param>
+        /// <param name="cmdLine"></param>
+        public void ProcessCmdLine(string source, string cmdLine)
         {
-            string label = "";
-            List<Token> tokens = Utils.Tokenize(input, _operators, false);
-            if (tokens.Count > 0)
-            {
-                List<List<Token>> cmds = Utils.Split(tokens, _operators);
-                if (cmds.Count > 0)
-                {
-                    tokens = cmds[cmds.Count - 1];
-                    Utils.RemoveQuoting(tokens);
-                    label = tokens[0].value;
-                }
-            }
-
-            return Utils.GetSimilarWords(label, true, maxDistance, true,
-                _aliases.Keys,
-                _builtinCmds.Keys,
-                _cmds.Keys,
-                _convars.Keys,
-                _methods.Keys);
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public Font GetFont(string name)
-        {
-            Font font;
-            UFont uFont;
-
-            if (_uFonts.ContainsKey(name))
-                return _uFonts[name].font;
-
-            if (name == "Arial")
-            {
-                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                if (font != null)
-                {
-                    uFont = new UFont(FontType.BUILTIN, font);
-                    _uFonts.Add(name, uFont);
-                    return font;
-                }
-            }
-
-            font = Resources.Load<Font>(name);
-            if (font != null)
-            {
-                uFont = new UFont(FontType.RESOURCE, font);
-                _uFonts.Add(name, uFont);
-                return font;
-            }
-
-            string[] fontNames = Font.GetOSInstalledFontNames();
-            if (Array.IndexOf<string>(fontNames, name) > 0)
-            {
-                font = Font.CreateDynamicFontFromOSFont(name, 1);
-                uFont = new UFont(FontType.FILE, font);
-                _uFonts.Add(name, uFont);
-                return font;
-            }
-
-            return null;
+            processCmdLine(source, cmdLine, true);
         }
 
         private void processCmdLine(string source, string cmdLine, bool saveToHistory = true)
@@ -618,12 +564,15 @@ namespace UShell
         {
             List<Token> tokens;
             cmdLine = Utils.RemoveEscapedSeparators(cmdLine, new char[] { '\n', '\r' });
-            try {
+            try
+            {
                 tokens = Utils.Tokenize(cmdLine, _operators);
                 Utils.ExpandTokens(tokens, getVariableValue);
                 tokens.RemoveAll(token => string.IsNullOrEmpty(token.value));
                 Utils.Parse(tokens);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 Debug.LogWarning("shell: " + e.Message);
                 return;
             }
@@ -746,9 +695,8 @@ namespace UShell
             catch (ArgumentException)
             {
                 string log = string.Format(wrongSyntaxMessage, label);
-
                 string[] syntaxes = cmd.GetSyntaxes(label);
-                if (syntaxes != null && syntaxes.Length > 0)
+                if (syntaxes?.Length > 0)
                     log += "\n" + label + " " + syntaxes[0];
 
                 Debug.LogWarning(log);
@@ -817,8 +765,7 @@ namespace UShell
                         }
                         else
                         {
-                            TypeConverter converter = TypeDescriptor.GetConverter(convarCmd.Type);
-                            object value = Utils.ConvertFromString(converter, fields[0]);
+                            object value = Utils.ConvertFromString(fields[0], convarCmd.Type);
                             for (int i = 0; i < instances.Count; i++)
                                 convarCmd.SetValue(instances[i], value);
                         }
@@ -857,7 +804,7 @@ namespace UShell
                     Debug.LogWarning(string.Format(noInstances, label, methodCmds[i].DeclaringType));
                     return;
                 }
-                
+
                 object[] args = new object[fields.Length];
                 for (int j = 0; j < args.Length; j++)
                 {
@@ -871,10 +818,9 @@ namespace UShell
                     else
                         fieldValue = fields[j];
 
-                    TypeConverter converter = TypeDescriptor.GetConverter(paramType);
                     try
                     {
-                        args[j] = Utils.ConvertFromString(converter, fieldValue);
+                        args[j] = Utils.ConvertFromString(fieldValue, paramType);
                     }
                     catch (Exception e)
                     {
@@ -912,100 +858,124 @@ namespace UShell
             getHelpFromLabel(strBuilder, methodCmds, label);
             Debug.LogWarning(strBuilder);
         }
+        #endregion
 
-        private void findAndRegisterMembers()
+        #region OTHER
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="index">The less the more recent</param>
+        /// <returns></returns>
+        public string GetCmdLineFromHistory(int index)
         {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-            //Make the shell assembly tested before the others
-            Assembly executingAssembly = Assembly.GetExecutingAssembly();
-            for (int i = 0; i < assemblies.Length; i++)
-            {
-                if (assemblies[i] == executingAssembly)
-                {
-                    Assembly tmp = assemblies[i];
-                    assemblies[i] = assemblies[0];
-                    assemblies[0] = tmp;
-                    break;
-                }
-            }
-
-            //Make the shell type tested before the others
-            Type[] executingTypes = executingAssembly.GetTypes();
-            for (int i = 0; i < executingTypes.Length; i++)
-            {
-                if (executingTypes[i] == typeof(Shell))
-                {
-                    Type tmp = executingTypes[i];
-                    executingTypes[i] = executingTypes[0];
-                    executingTypes[0] = tmp;
-                    break;
-                }
-            }
-
-            registerMembersFromTypes(executingTypes);
-            for (int i = 1; i < assemblies.Length; i++)
-            {
-                bool isException = false;
-                Assembly assembly = assemblies[i];
-                for (int j = 0; j < _excludedAssemblies.Length; j++)
-                {
-                    if (assembly.FullName.StartsWith(_excludedAssemblies[j], StringComparison.InvariantCulture))
-                    {
-                        isException = true;
-                        break;
-                    }
-                }
-
-                if (!isException)
-                    registerMembersFromTypes(assemblies[i].GetTypes());
-            }
+            return _history.GetValue(index);
         }
-        private void registerMembersFromTypes(Type[] types)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="prefix"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public string GetCompletion(string prefix, out List<string> options)
         {
-            for (int i = 0; i < types.Length; i++)
+            //Potential variable assignments are not taken into account
+
+            string label = "";
+            bool bypassAliases = false;
+            List<Token> tokens = Utils.Tokenize(prefix, _operators, false);
+            if (prefix.EndsWith(_blankCharacters)) //Not correct if quotation is used
+                tokens.Add(new Token(Token.Type.WORD, ""));
+            if (tokens.Count > 0)
             {
-                FieldInfo[] fieldInfos = types[i].GetFields(_bindingFlags);
-                for (int j = 0; j < fieldInfos.Length; j++)
-                    if (Attribute.IsDefined(fieldInfos[j], typeof(Convar), false))
-                        registerConvar(new ConvarCmd(fieldInfos[j]));
-
-                PropertyInfo[] propertyInfos = types[i].GetProperties(_bindingFlags);
-                for (int j = 0; j < propertyInfos.Length; j++)
-                    if (Attribute.IsDefined(propertyInfos[j], typeof(Convar), false))
-                        registerConvar(new ConvarCmd(propertyInfos[j]));
-
-                MethodInfo[] methodInfos = types[i].GetMethods(_bindingFlags);
-                for (int j = 0; j < methodInfos.Length; j++)
-                    if (Attribute.IsDefined(methodInfos[j], typeof(Cmd), false))
-                        registerMethod(new MethodCmd(methodInfos[j]));
+                List<List<Token>> cmds = Utils.Split(tokens, _operators);
+                if (cmds.Count > 0)
+                {
+                    tokens = cmds[cmds.Count - 1];
+                    string quotedLabel = tokens[0].value;
+                    Utils.RemoveQuoting(tokens);
+                    label = tokens[0].value;
+                    bypassAliases = quotedLabel != label;
+                }
             }
-        }
-        private void registerConvar(ConvarCmd convarCmd)
-        {
-            string label = convarCmd.Name;
-            if (!_convars.ContainsKey(label))
-                _convars.Add(label, convarCmd);
+
+            if (tokens.Count > 1)
+            {
+                options = new List<string>();
+                if ((!bypassAliases && _aliases.ContainsKey(label)) || _builtinCmds.ContainsKey(label) || _cmds.ContainsKey(label) || _convars.ContainsKey(label) || _methods.ContainsKey(label))
+                    options.Add(label);
+                else
+                    return "";
+            }
             else
             {
-                label = convarCmd.DeclaringType + "." + convarCmd.Name;
-                if (!_convars.ContainsKey(label))
-                    _convars.Add(label, convarCmd);
-            }
-        }
-        private void registerMethod(MethodCmd methodCmd)
-        {
-            string label = methodCmd.Name;
-            if (!_methods.ContainsKey(label))
-                _methods.Add(label, new List<MethodCmd>() { methodCmd });
-            else
-            {
-                for (int i = 0; i < _methods[label].Count; i++)
-                    if (methodCmd.ParametersCount == _methods[label][i].ParametersCount || methodCmd.DeclaringType != _methods[label][i].DeclaringType)
-                        return;
+                options = Utils.GetWordsThatStartWith(label, false,
+                    _builtinCmds.Keys,
+                    _cmds.Keys,
+                    _convars.Keys,
+                    _methods.Keys);
 
-                _methods[label].Add(methodCmd);
+                if (!bypassAliases)
+                    options.AddRange(Utils.GetWordsThatStartWith(label, false, _aliases.Keys));
             }
+
+            if (options.Count == 0)
+            {
+                return "";
+            }
+            else if (options.Count == 1)
+            {
+                string labelFound = options[0];
+                if (!bypassAliases && !_usedAliases.Contains(labelFound) && _aliases.TryGetValue(labelFound, out string aliasValue))
+                {
+                    _usedAliases.Push(labelFound);
+                    prefix = prefix.ReplaceFirst(label, aliasValue);
+                    string completion = labelFound.Remove(0, label.Length) + GetCompletion(prefix, out options);
+                    _usedAliases.Pop();
+
+                    return completion;
+                }
+                else if (_builtinCmds.TryGetValue(labelFound, out ICommand cmd) || _cmds.TryGetValue(labelFound, out cmd))
+                {
+                    string[] args = tokens.Count > 1 ? Utils.ExtractArguments(tokens) : new string[] { "" };
+                    return labelFound.Remove(0, label.Length) + (tokens.Count > 1 ? "" : " ") + cmd.GetCompletion(labelFound, args, out options);
+                }
+                else
+                {
+                    if (tokens.Count > 1)
+                        return "";
+                    return labelFound.Remove(0, label.Length) + " ";
+                }
+            }
+            else
+                return Utils.GetLongestCommonPrefix(options).Remove(0, label.Length);
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="maxDistance"></param>
+        /// <returns></returns>
+        public List<string> GetSimilarCmds(string input, int maxDistance)
+        {
+            string label = "";
+            List<Token> tokens = Utils.Tokenize(input, _operators, false);
+            if (tokens.Count > 0)
+            {
+                List<List<Token>> cmds = Utils.Split(tokens, _operators);
+                if (cmds.Count > 0)
+                {
+                    tokens = cmds[cmds.Count - 1];
+                    Utils.RemoveQuoting(tokens);
+                    label = tokens[0].value;
+                }
+            }
+
+            return Utils.GetSimilarWords(label, true, maxDistance, true,
+                _aliases.Keys,
+                _builtinCmds.Keys,
+                _cmds.Keys,
+                _convars.Keys,
+                _methods.Keys);
         }
 
         private string getVariableValue(string name)
@@ -1034,14 +1004,6 @@ namespace UShell
                 }
                 catch { }
             }
-        }
-
-        private void deleteAllFonts()
-        {
-            foreach (UFont uFont in _uFonts.Values)
-                uFont.Free();
-
-            _uFonts.Clear();
         }
         #endregion
 
@@ -1654,33 +1616,9 @@ namespace UShell
             }
         }
         #endregion
+        #endregion
 
         #region TYPES
-        private enum FontType
-        {
-            BUILTIN,
-            RESOURCE,
-            FILE
-        }
-        private class UFont
-        {
-            public readonly FontType fontType;
-            public readonly Font font;
-
-            public UFont(FontType fontType, Font font)
-            {
-                this.fontType = fontType;
-                this.font = font;
-            }
-            public void Free()
-            {
-                if (fontType == FontType.RESOURCE)
-                    Resources.UnloadAsset(font);
-                else if (fontType == FontType.FILE)
-                    Font.Destroy(font);
-            }
-        }
-
         private class History
         {
             private string[] _values = new string[10];
@@ -1815,17 +1753,17 @@ namespace UShell
                 {
                     if (IsField)
                     {
-                        Convar convar = _fieldInfo.GetCustomAttribute<Convar>();
-                        if (convar != null && !string.IsNullOrEmpty(convar.Label))
-                            return convar.Label;
+                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
+                            return attribute.Label;
                         else
                             return _fieldInfo.Name;
                     }
                     if (IsProperty)
                     {
-                        Convar convar = _propertyInfo.GetCustomAttribute<Convar>();
-                        if (convar != null && !string.IsNullOrEmpty(convar.Label))
-                            return convar.Label;
+                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
+                            return attribute.Label;
                         else
                             return _propertyInfo.Name;
                     }
@@ -1839,15 +1777,15 @@ namespace UShell
                 {
                     if (IsField)
                     {
-                        Convar convar = _fieldInfo.GetCustomAttribute<Convar>();
-                        if (convar != null && !string.IsNullOrEmpty(convar.Info))
-                            return convar.Info;
+                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
+                            return attribute.Info;
                     }
                     if (IsProperty)
                     {
-                        Convar convar = _propertyInfo.GetCustomAttribute<Convar>();
-                        if (convar != null && !string.IsNullOrEmpty(convar.Info))
-                            return convar.Info;
+                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
+                            return attribute.Info;
                     }
 
                     return "";
@@ -1871,15 +1809,15 @@ namespace UShell
                 {
                     if (IsField)
                     {
-                        Convar convar = _fieldInfo.GetCustomAttribute<Convar>();
-                        if (convar != null)
-                            return !convar.ReadOnly;
+                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null)
+                            return !attribute.ReadOnly;
                     }
                     if (IsProperty)
                     {
-                        Convar convar = _propertyInfo.GetCustomAttribute<Convar>();
-                        if (convar != null)
-                            return _propertyInfo.CanWrite && !convar.ReadOnly;
+                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
+                        if (attribute != null)
+                            return _propertyInfo.CanWrite && !attribute.ReadOnly;
                     }
 
                     return false;
@@ -1931,9 +1869,9 @@ namespace UShell
             {
                 get
                 {
-                    Cmd cmd = _method.GetCustomAttribute<Cmd>();
-                    if (cmd != null && !string.IsNullOrEmpty(cmd.Label))
-                        return cmd.Label;
+                    CmdAttribute attribute = _method.GetCustomAttribute<CmdAttribute>();
+                    if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
+                        return attribute.Label;
 
                     return _method.Name;
                 }
@@ -1942,9 +1880,9 @@ namespace UShell
             {
                 get
                 {
-                    Cmd cmd = _method.GetCustomAttribute<Cmd>();
-                    if (cmd != null && !string.IsNullOrEmpty(cmd.Info))
-                        return cmd.Info;
+                    CmdAttribute attribute = _method.GetCustomAttribute<CmdAttribute>();
+                    if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
+                        return attribute.Info;
 
                     return "";
                 }
@@ -1963,26 +1901,104 @@ namespace UShell
             }
         }
         #endregion
+
+        #region FONTS
+        private enum FontType
+        {
+            BUILTIN,
+            RESOURCE,
+            FILE
+        }
+        private class UFont
+        {
+            public readonly FontType fontType;
+            public readonly Font font;
+
+            public UFont(FontType fontType, Font font)
+            {
+                this.fontType = fontType;
+                this.font = font;
+            }
+            public void Free()
+            {
+                if (fontType == FontType.RESOURCE)
+                    Resources.UnloadAsset(font);
+                else if (fontType == FontType.FILE)
+                    Font.Destroy(font);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public Font GetFont(string name)
+        {
+            Font font;
+            UFont uFont;
+
+            if (_uFonts.ContainsKey(name))
+                return _uFonts[name].font;
+
+            if (name == "Arial")
+            {
+                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (font != null)
+                {
+                    uFont = new UFont(FontType.BUILTIN, font);
+                    _uFonts.Add(name, uFont);
+                    return font;
+                }
+            }
+
+            font = Resources.Load<Font>(name);
+            if (font != null)
+            {
+                uFont = new UFont(FontType.RESOURCE, font);
+                _uFonts.Add(name, uFont);
+                return font;
+            }
+
+            string[] fontNames = Font.GetOSInstalledFontNames();
+            if (Array.IndexOf<string>(fontNames, name) > 0)
+            {
+                font = Font.CreateDynamicFontFromOSFont(name, 1);
+                uFont = new UFont(FontType.FILE, font);
+                _uFonts.Add(name, uFont);
+                return font;
+            }
+
+            return null;
+        }
+        private void deleteAllFonts()
+        {
+            foreach (UFont uFont in _uFonts.Values)
+                uFont.Free();
+
+            _uFonts.Clear();
+        }
+        #endregion
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class Convar : Attribute
+    public class ConvarAttribute : Attribute
     {
         public string Label { get; }
         public string Info { get; }
         public bool ReadOnly { get; }
 
-        public Convar() { }
-        public Convar(string label)
+        public ConvarAttribute() { }
+        public ConvarAttribute(string label)
         {
             this.Label = label;
         }
-        public Convar(string label, string info)
+        public ConvarAttribute(string label, string info)
         {
             this.Label = label;
             this.Info = info;
         }
-        public Convar(string label, string info, bool readOnly)
+        public ConvarAttribute(string label, string info, bool readOnly)
         {
             this.Label = label;
             this.Info = info;
@@ -1990,17 +2006,17 @@ namespace UShell
         }
     }
     [AttributeUsage(AttributeTargets.Method)]
-    public class Cmd : Attribute
+    public class CmdAttribute : Attribute
     {
         public string Label { get; }
         public string Info { get; }
 
-        public Cmd() { }
-        public Cmd(string label)
+        public CmdAttribute() { }
+        public CmdAttribute(string label)
         {
             this.Label = label;
         }
-        public Cmd(string label, string info)
+        public CmdAttribute(string label, string info)
         {
             this.Label = label;
             this.Info = info;
@@ -2024,25 +2040,15 @@ namespace UShell
 
     public class Log
     {
-        #region FIELDS
-        private LogType _logType;
-        private string _log;
-        private string _stackTrace;
-        #endregion
+        public LogType LogType { get; }
+        public string Value { get; }
+        public string StackTrace { get; }
 
-        #region PROPERTIES
-        public LogType logType { get { return _logType; } }
-        public string log { get { return _log; } }
-        public string stackTrace { get { return _stackTrace; } }
-        #endregion
-
-        #region CONSTRUCTORS
-        public Log(LogType logType, string log, string stackTrace)
+        public Log(LogType logType, string value, string stackTrace)
         {
-            _logType = logType;
-            _log = log;
-            _stackTrace = stackTrace;
+            LogType = logType;
+            Value = value;
+            StackTrace = stackTrace;
         }
-        #endregion
     }
 }

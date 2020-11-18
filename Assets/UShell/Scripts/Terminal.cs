@@ -162,15 +162,15 @@ namespace UShell.Consoles
         }
         public void AddLog(Log log)
         {
-            if (log.logType == LogType.Log)
+            if (log.LogType == LogType.Log)
             {
-                _strBuilder.Append(log.log).Append("\n");
+                _strBuilder.Append(log.Value).Append("\n");
             }
             else
             {
                 _strBuilder.Append("<color=#");
 
-                switch (log.logType)
+                switch (log.LogType)
                 {
                     case LogType.Assert:
                         _strBuilder.Append(_strColorAssert);
@@ -191,9 +191,9 @@ namespace UShell.Consoles
                 }
 
                 if (_logStackTrace)
-                    _strBuilder.Append(">").AppendLine(log.log).Append(log.stackTrace).Append("</color>\n");
+                    _strBuilder.Append(">").AppendLine(log.Value).Append(log.StackTrace).Append("</color>\n");
                 else
-                    _strBuilder.Append(">").Append(log.log).Append("</color>\n");
+                    _strBuilder.Append(">").Append(log.Value).Append("</color>\n");
             }
 
             _newLog = true;

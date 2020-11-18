@@ -149,9 +149,9 @@ namespace UShell.Consoles
             if (_isLogging)
             {
                 if (_logStackTrace)
-                    outputString(log.log + log.stackTrace);
+                    outputString(log.Value + log.StackTrace);
                 else
-                    outputString(log.log);
+                    outputString(log.Value);
             }
         }
         public bool ProcessEvent(string label, string[] args)
