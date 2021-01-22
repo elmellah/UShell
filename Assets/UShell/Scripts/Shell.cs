@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -53,6 +54,7 @@ namespace UShell
             "font",
             "args",
             "convar",
+            "event",
             "reflex",
         };
         [Convar("converters", "the shell converters", true)]
@@ -114,8 +116,11 @@ namespace UShell
         private Dictionary<string, string> _aliases = new Dictionary<string, string>();
         private Dictionary<string, ConvarCmd> _convars = new Dictionary<string, ConvarCmd>();
         private Dictionary<string, List<MethodCmd>> _methods = new Dictionary<string, List<MethodCmd>>();
+        private Dictionary<string, EventCmd> _events = new Dictionary<string, EventCmd>();
         private Dictionary<Type, List<object>> _instances = new Dictionary<Type, List<object>>();
         private Dictionary<string, string> _variables = new Dictionary<string, string>();
+
+        private AssemblyBuilder _eventsAssemblyBuilder;
 
         [Convar("headless", "is the current process running in batchmode?", true)]
         private bool _isHeadless = false;
@@ -205,6 +210,9 @@ namespace UShell
 
             findAndRegisterMembers();
             RegisterInstance(this);
+
+            //Create the assembly for the events
+            _eventsAssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("UShellEventsAssembly"), AssemblyBuilderAccess.Run);
 
             Debug.Log("shell: initialized in " + watch.ElapsedMilliseconds + "ms");
         }
@@ -372,8 +380,8 @@ namespace UShell
             return _cmds.Remove(id);
         }
         /// <summary>
-        /// If a type defines an instance member with a Convar/Cmd attribute, each instance of this type must be registered in order to access the member.
-        /// It is not necessary to call this method if the Convar/Cmd attribute is only used on static members.
+        /// If a type defines an instance member with a Convar/Cmd/Event attribute, each instance of this type must be registered in order to access the member.
+        /// It is not necessary to call this method if the Convar/Cmd/Event attribute is only used on static members.
         /// </summary>
         /// <param name="instance"></param>
         public void RegisterInstance(object instance)
@@ -493,6 +501,11 @@ namespace UShell
                 for (int j = 0; j < methodInfos.Length; j++)
                     if (Attribute.IsDefined(methodInfos[j], typeof(CmdAttribute), false))
                         registerMethod(new MethodCmd(methodInfos[j]));
+
+                EventInfo[] eventInfos = types[i].GetEvents(_bindingFlags);
+                for (int j = 0; j < eventInfos.Length; j++)
+                    if (Attribute.IsDefined(eventInfos[j], typeof(EventAttribute), false))
+                        registerEvent(new EventCmd(eventInfos[j]));
             }
         }
         private void registerConvar(ConvarCmd convarCmd)
@@ -519,6 +532,18 @@ namespace UShell
                         return;
 
                 _methods[label].Add(methodCmd);
+            }
+        }
+        private void registerEvent(EventCmd eventCmd)
+        {
+            string label = eventCmd.Name;
+            if (!_events.ContainsKey(label))
+                _events.Add(label, eventCmd);
+            else
+            {
+                label = eventCmd.DeclaringType + "." + eventCmd.Name;
+                if (!_events.ContainsKey(label))
+                    _events.Add(label, eventCmd);
             }
         }
         #endregion
@@ -567,7 +592,7 @@ namespace UShell
             try
             {
                 tokens = Utils.Tokenize(cmdLine, _operators);
-                Utils.ExpandTokens(tokens, getVariableValue);
+                Utils.ExpandTokens(tokens, GetVariableValue);
                 tokens.RemoveAll(token => string.IsNullOrEmpty(token.value));
                 Utils.Parse(tokens);
             }
@@ -580,7 +605,7 @@ namespace UShell
             List<List<Token>> cmds = Utils.Split(tokens, _operators);
             for (int i = 0; i < cmds.Count; i++)
             {
-                int offset = Utils.ResolveAssignment(cmds[i], setVariableValue);
+                int offset = Utils.ResolveAssignment(cmds[i], SetVariableValue);
                 if (cmds[i].Count > offset)
                 {
                     string label = cmds[i][offset].value;
@@ -814,7 +839,7 @@ namespace UShell
                     Type paramType = parameters[j].ParameterType.IsByRef ? parameters[j].ParameterType.GetElementType() : parameters[j].ParameterType;
                     string fieldValue;
                     if (parameters[j].ParameterType.IsByRef && !parameters[j].IsIn)
-                        fieldValue = getVariableValue(fields[j]);
+                        fieldValue = GetVariableValue(fields[j]);
                     else
                         fieldValue = fields[j];
 
@@ -838,7 +863,7 @@ namespace UShell
                     for (int j = 0; j < args.Length; j++)
                     {
                         if (parameters[j].ParameterType.IsByRef && !parameters[j].IsIn)
-                            setVariableValue(fields[j], args[j].ToString());
+                            SetVariableValue(fields[j], args[j].ToString());
                     }
 
                     if (returnValue != null)
@@ -978,14 +1003,14 @@ namespace UShell
                 _methods.Keys);
         }
 
-        private string getVariableValue(string name)
+        public string GetVariableValue(string name)
         {
             if (_variables.TryGetValue(name, out string value))
                 return value;
                 
             return "";
         }
-        private void setVariableValue(string name, string value)
+        public void SetVariableValue(string name, string value)
         {
             if (_variables.ContainsKey(name))
                 _variables[name] = value;
@@ -1057,6 +1082,14 @@ namespace UShell
                     };
                 case "args":
                     return new string[] { "[arg ...]" };
+                case "event":
+                    return new string[]
+                    {
+                        "[-r event] [event cmd-line]",
+                        "",
+                        "-r event",
+                        "event cmd-line",
+                    };
             }
 
             return new string[0];
@@ -1114,6 +1147,14 @@ namespace UShell
                     return new string[] { "for debugging purpose" };
                 case "convar":
                     return new string[] { "log all console variables" };
+                case "event":
+                    return new string[]
+                    {
+                        "manage events",
+                        "log all registered events",
+                        "remove all command lines associated with an event",
+                        "associate a command line to an event. When the event will be raised, the command line will be executed",
+                    };
             }
             return new string[0];
         }
@@ -1125,6 +1166,8 @@ namespace UShell
                 return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, _builtinCmds.Keys, _cmds.Keys, _aliases.Keys, _convars.Keys, _methods.Keys);
             else if (label == "unalias")
                 return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, _aliases.Keys);
+            else if (label == "event")
+                return Utils.GetCompletion(args[0], args.Length > 1 ? true : false, out options, new string[] { "", "-r" }, _events.Keys);
 
             options = new List<string>();
             return "";
@@ -1173,6 +1216,9 @@ namespace UShell
                     break;
                 case "convar":
                     executeConvar(args);
+                    break;
+                case "event":
+                    executeEvent(args);
                     break;
                 case "reflex":
                     executeReflex(args);
@@ -1502,6 +1548,59 @@ namespace UShell
 
             Debug.Log(log.ToString());
         }
+        private void executeEvent(string[] args)
+        {
+            EventCmd eventCmd;
+
+            if (args.Length == 0)
+            {
+                StringBuilder log = new StringBuilder();
+                log.Append("events: " + _events.Count);
+
+                foreach (var @event in _events)
+                {
+                    string convarType = @event.Value.IsStatic ? "-" : "+";
+                    log.Append("\n\t").Append(convarType).Append(" ").Append(@event.Key);
+
+                    if (!@event.Value.IsStatic)
+                    {
+                        int instanceCount = 0;
+                        Type declaringType = @event.Value.DeclaringType;
+
+                        if (_instances.ContainsKey(declaringType))
+                            instanceCount = _instances[declaringType].Count;
+
+                        log.Append(string.Format(" ({0})", instanceCount));
+                    }
+
+                    string info = @event.Value.Info;
+                    if (!string.IsNullOrEmpty(info))
+                        log.Append(": ").Append(info);
+                }
+
+                Debug.Log(log.ToString());
+            }
+            else if (args.Length == 2)
+            {
+                switch (args[0])
+                {
+                    case "-r":
+                        if (_events.TryGetValue(args[1], out eventCmd))
+                            eventCmd.RemoveAllEventHandlers();
+                        else
+                            Debug.LogWarning(args[1] + ": unknown event");
+                        break;
+                    default:
+                        if (_events.TryGetValue(args[0], out eventCmd))
+                            eventCmd.AddEventHandler(args[1], _eventsAssemblyBuilder, _instances);
+                        else
+                            Debug.LogWarning(args[0] + ": unknown event");
+                        break;
+                }
+            }
+            else
+                throw new ArgumentException();
+        }
         private void executeReflex(string[] args)
         {
             if (args.Length == 0)
@@ -1706,9 +1805,9 @@ namespace UShell
             private PropertyInfo _propertyInfo;
 
 
-            public bool IsValid { get { return IsField ^ IsProperty; } }
-            public bool IsField { get { return _fieldInfo != null; } }
-            public bool IsProperty { get { return _propertyInfo != null; } }
+            public bool IsValid { get => IsField ^ IsProperty; }
+            public bool IsField { get => _fieldInfo != null; }
+            public bool IsProperty { get => _propertyInfo != null; }
 
             public Type Type
             {
@@ -1862,8 +1961,8 @@ namespace UShell
             public Type ReturnType { get => _method.ReturnType; }
             public Type DeclaringType { get => _method.DeclaringType; }
             public bool IsStatic { get => _method.IsStatic; }
-            public int ParametersCount { get { return _parameters.Length; } }
-            public ParameterInfo[] Parameters { get { return _parameters; } }
+            public int ParametersCount { get => _parameters.Length; }
+            public ParameterInfo[] Parameters { get => _parameters; }
 
             public string Name
             {
@@ -1898,6 +1997,123 @@ namespace UShell
             public object Invoke(object obj, object[] parameters)
             {
                 return _method.Invoke(obj, parameters);
+            }
+        }
+        private struct EventCmd
+        {
+            private EventInfo _event;
+            private MethodInfo _invoke;
+            private ParameterInfo[] _parameters;
+            private MethodInfo _addMethod;
+
+            private List<Tuple<object, Delegate>> _targetsAndHandlers;
+
+
+            public Type ReturnType { get => _invoke.ReturnType; }
+            public Type DeclaringType { get => _event.DeclaringType; }
+            public Type EventHandlerType { get => _event.EventHandlerType; }
+            public bool IsStatic { get => _addMethod.IsStatic; }
+            public int ParametersCount { get => _parameters.Length; }
+            public Type[] ParametersTypes
+            {
+                get
+                {
+                    Type[] paramTypes = new Type[_parameters.Length];
+                    for (int j = 0; j < _parameters.Length; j++)
+                        paramTypes[j] = _parameters[j].ParameterType;
+
+                    return paramTypes;
+                }
+            }
+
+            public string Name
+            {
+                get
+                {
+                    EventAttribute attribute = _event.GetCustomAttribute<EventAttribute>();
+                    if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
+                        return attribute.Label;
+
+                    return _event.Name;
+                }
+            }
+            public string Info
+            {
+                get
+                {
+                    EventAttribute attribute = _event.GetCustomAttribute<EventAttribute>();
+                    if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
+                        return attribute.Info;
+
+                    return "";
+                }
+            }
+
+
+            public EventCmd(EventInfo eventInfo)
+            {
+                _event = eventInfo;
+                _invoke = eventInfo.EventHandlerType.GetMethod("Invoke");
+                _parameters = _invoke.GetParameters();
+                _addMethod = eventInfo.GetAddMethod();
+
+                _targetsAndHandlers = new List<Tuple<object, Delegate>>();
+            }
+
+            public void AddEventHandler(string cmdLine, AssemblyBuilder assemblyBuilder, Dictionary<Type, List<object>> instances)
+            {
+                ModuleBuilder mb = assemblyBuilder.DefineDynamicModule(this.Name + "_" + Environment.TickCount); //Environment.TickCount: the module name must be unique
+                MethodBuilder meb = mb.DefineGlobalMethod(this.Name, MethodAttributes.Public | MethodAttributes.Static, this.ReturnType, this.ParametersTypes);
+                ILGenerator il = meb.GetILGenerator();
+
+                #region CIL
+                MethodInfo processCmdLineMethod = typeof(Shell).GetMethod(nameof(Shell.ProcessCmdLine), new Type[] { typeof(string), typeof(string) });
+                MethodInfo mainPropertyMethod = typeof(Shell).GetProperty(nameof(Shell.Main), typeof(Shell)).GetMethod;
+                MethodInfo setVariableValueMethod = typeof(Shell).GetMethod(nameof(Shell.SetVariableValue), BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo convertToStringMethod = typeof(Utils).GetMethod(nameof(Utils.ConvertToString), BindingFlags.Public | BindingFlags.Static);
+
+                il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
+                il.Emit(OpCodes.Ldstr, "0");
+                il.Emit(OpCodes.Ldstr, this.Name);
+                il.EmitCall(OpCodes.Call, setVariableValueMethod, null);
+
+                for (int i = 0; i < this.ParametersTypes.Length; i++)
+                {
+                    il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
+                    il.Emit(OpCodes.Ldstr, (i + 1).ToString());
+                    il.Emit(OpCodes.Ldarg, i);
+                    if (this.ParametersTypes[i].IsValueType)
+                        il.Emit(OpCodes.Box, this.ParametersTypes[i]);
+                    il.EmitCall(OpCodes.Call, convertToStringMethod, null);
+                    il.EmitCall(OpCodes.Call, setVariableValueMethod, null);
+                }
+
+                il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
+                il.Emit(OpCodes.Ldstr, this.Name);
+                il.Emit(OpCodes.Ldstr, cmdLine);
+                il.EmitCall(OpCodes.Call, processCmdLineMethod, null);
+                if (this.ReturnType != typeof(void))
+                {
+                    //There is currently no way of knowing what a command returns, so we return 0 or null
+                    if (this.ReturnType.IsValueType) il.Emit(OpCodes.Ldc_I4_0);
+                    else il.Emit(OpCodes.Ldnull);
+                }
+                il.Emit(OpCodes.Ret);
+                #endregion CIL
+
+                mb.CreateGlobalFunctions();
+                MethodInfo eventHandler = mb.GetMethod(this.Name);
+                Delegate handler = Delegate.CreateDelegate(this.EventHandlerType, eventHandler);
+                foreach (var target in instances[this.DeclaringType])
+                {
+                    _event.AddEventHandler(target, handler);
+                    _targetsAndHandlers.Add(new Tuple<object, Delegate>(target, handler));
+                }
+            }
+            public void RemoveAllEventHandlers()
+            {
+                foreach (var e in _targetsAndHandlers)
+                    _event.RemoveEventHandler(e.Item1, e.Item2);
             }
         }
         #endregion
@@ -2017,6 +2233,23 @@ namespace UShell
             this.Label = label;
         }
         public CmdAttribute(string label, string info)
+        {
+            this.Label = label;
+            this.Info = info;
+        }
+    }
+    [AttributeUsage(AttributeTargets.Event)]
+    public class EventAttribute : Attribute
+    {
+        public string Label { get; }
+        public string Info { get; }
+
+        public EventAttribute() { }
+        public EventAttribute(string label)
+        {
+            this.Label = label;
+        }
+        public EventAttribute(string label, string info)
         {
             this.Label = label;
             this.Info = info;
