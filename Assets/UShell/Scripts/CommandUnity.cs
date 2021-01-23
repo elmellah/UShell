@@ -1,12 +1,13 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Text;
-using System.IO;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Debug = UnityEngine.Debug;
 
 namespace UShell.Commands
 {
@@ -27,6 +28,10 @@ namespace UShell.Commands
         private float _time;
         private bool _isPinging;
 #endif
+
+        private bool _planRestart;
+        private DateTime _restartDate;
+        private DateTime _lastTime;
 
         private AudioClip _generatedClip;
         #endregion
@@ -62,6 +67,7 @@ namespace UShell.Commands
             Shell.Main.RegisterCmd("cursor", this); //OP Only
             Shell.Main.RegisterCmd("webcam", this);
             Shell.Main.RegisterCmd("tier", this);
+            Shell.Main.RegisterCmd("restart", this);
         }
         void Update()
         {
@@ -87,6 +93,11 @@ namespace UShell.Commands
                 _time += Time.deltaTime;
             }
 #endif
+
+            if (_planRestart && _lastTime.TimeOfDay < _restartDate.TimeOfDay && DateTime.Now.TimeOfDay >= _restartDate.TimeOfDay)
+                restartProcess();
+
+            _lastTime = DateTime.Now;
         }
         #endregion
 
@@ -170,6 +181,14 @@ namespace UShell.Commands
                         "-l",
                         "-c",
                         "-n"
+                    };
+                case "restart":
+                    return new string[]
+                    {
+                        "[-p [plan-restart]] [-t [restart-time]]",
+                        "",
+                        "-p [true|false]",
+                        "-t [restart-time]",
                     };
             }
             return new string[0];
@@ -262,6 +281,14 @@ namespace UShell.Commands
                     };
                 case "tier":
                     return new string[] { "log the current graphic tier" };
+                case "restart":
+                    return new string[]
+                    {
+                        "manage restart of the process",
+                        "restart the current process, with the same arguments",
+                        "plan the restart of the process",
+                        "the process will be restarted at this time",
+                    };
             }
             return new string[0];
         }
@@ -335,6 +362,9 @@ namespace UShell.Commands
                     break;
                 case "tier":
                     executeTier(args);
+                    break;
+                case "restart":
+                    executeRestart(args);
                     break;
             }
         }
@@ -700,10 +730,12 @@ namespace UShell.Commands
             if (args.Length == 0)
             {
                 Debug.Log(
+                    "current time                   " + DateTime.Now + "\n" +
+                    "launch time                    " + DateTime.Now.AddSeconds(-Time.realtimeSinceStartup) + "\n" +
                     "fixed delta time               " + Time.fixedDeltaTime + "\n" +
                     "maximum delta time             " + Time.maximumDeltaTime + "\n" +
                     "time scale                     " + Time.timeScale + "\n" +
-                    "maximum particle delta time    " + Time.maximumParticleDeltaTime + "\n"
+                    "maximum particle delta time    " + Time.maximumParticleDeltaTime
                 );
             }
             else if (args.Length == 1)
@@ -821,7 +853,55 @@ namespace UShell.Commands
         {
             Debug.Log(Graphics.activeTier);
         }
+        private void executeRestart(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                restartProcess();
+            }
+            else if (args.Length == 1)
+            {
+                switch (args[0])
+                {
+                    case "-t":
+                        Debug.Log(_restartDate);
+                        break;
+                    case "-p":
+                        Debug.Log(_planRestart);
+                        break;
+                    default:
+                        throw new ArgumentException();
+                }
+            }
+            else if (args.Length == 2)
+            {
+                switch (args[0])
+                {
+                    case "-t":
+                        _restartDate = DateTime.Parse(args[1]);
+                        break;
+                    case "-p":
+                        _planRestart = Utils.BoolParse(args[1]);
+                        break;
+                    default:
+                        throw new ArgumentException();
+                }
+            }
+            else
+                throw new ArgumentException();
+        }
 
+        private static void restartProcess()
+        {
+            ProcessStartInfo psi = new ProcessStartInfo();
+            psi.FileName = Environment.GetCommandLineArgs()[0];
+            psi.Arguments = Environment.CommandLine;
+            psi.UseShellExecute = true;
+            psi.CreateNoWindow = false;
+            psi.WindowStyle = ProcessWindowStyle.Normal;
+            Process.Start(psi);
+            Application.Quit();
+        }
 
         private static AudioClip generateAudioClip(string name, int lengthSamples, int sampleFrequency, float soundFrequency)
         {
