@@ -153,7 +153,7 @@ namespace UShell.Commands
                 case "volume":
                     return new string[] { "[value]" };
                 case "beep":
-                    return new string[] { "[frequency]" };
+                    return new string[] { "[frequency] [duration]" };
                 case "quit":
                     return new string[] { "[exitcode]" };
                 case "auth":
@@ -568,22 +568,25 @@ namespace UShell.Commands
                 return;
             }
 
-            if (args.Length == 0)
+            if (args.Length >= 0 && args.Length <= 2)
             {
-                AudioClip.Destroy(_generatedClip);
-                _generatedClip = generateAudioClip("beep", 44100, 44100, 440f);
-                _beepSource.clip = _generatedClip;
+                float soundFrequency = 440f;
+                float duration = 1f;
 
-                _beepSource.Stop();
-                _beepSource.Play();
-            }
-            else if (args.Length == 1)
-            {
-                float soundFrequency = Utils.FloatParse(args[0]);
-                soundFrequency = Mathf.Clamp(soundFrequency , -1000f, 1000f); //REALLY IMPORTANT!
+                if (args.Length == 1 || args.Length == 2)
+                {
+                    soundFrequency = Utils.FloatParse(args[0]);
+                    soundFrequency = Mathf.Clamp(soundFrequency, -1000f, 1000f); //REALLY IMPORTANT!
+                }
+                
+                if (args.Length == 2)
+                {
+                    duration = Utils.FloatParse(args[1]);
+                    duration = Mathf.Clamp(duration, -10f, 10f);
+                }
 
                 AudioClip.Destroy(_generatedClip);
-                _generatedClip = generateAudioClip("beep", 44100, 44100, soundFrequency);
+                _generatedClip = generateAudioClip("beep", (int)(44100 * duration), 44100, soundFrequency);
                 _beepSource.clip = _generatedClip;
 
                 _beepSource.Stop();
