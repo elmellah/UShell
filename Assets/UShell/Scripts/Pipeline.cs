@@ -247,7 +247,7 @@ namespace UShell.Consoles
             string buildFolder = Path.GetDirectoryName(pathToBuiltProject);
             string exeName = Path.GetFileName(pathToBuiltProject);
 
-            if (target == BuildTarget.StandaloneLinux || target == BuildTarget.StandaloneLinux64 || target == BuildTarget.StandaloneLinuxUniversal)
+            if (target == BuildTarget.StandaloneLinux64)
             {
                 TextAsset[] textAssets = Resources.LoadAll<TextAsset>(_bashScriptsFolder);
                 for (int i = 0; i < textAssets.Length; i++)
