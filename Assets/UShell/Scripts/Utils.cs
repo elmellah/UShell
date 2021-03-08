@@ -1,13 +1,13 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System;
-using System.Globalization;
-using System.Text.RegularExpressions;
-using System.Text;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace UShell
 {
@@ -185,7 +185,7 @@ namespace UShell
         public static T ConvertFromStringGeneric<T>(string input)
         {
             const string invalidValue = "invalid value";
-            const string cannotConvert = "no converter available";
+            const string cannotConvert = "no converter available for ";
 
             TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter.CanConvertFrom(typeof(string)))
@@ -196,7 +196,30 @@ namespace UShell
                     throw new FormatException(invalidValue);
             }
             else
-                throw new InvalidOperationException(cannotConvert);
+            {
+                var methods = typeof(T).GetMethods(BindingFlags.Public | BindingFlags.Static);
+                if (methods.Length > 0)
+                {
+                    IEnumerable<MethodInfo> operators =
+                        from method in methods
+                        where method.Name == "op_Explicit"
+                        where method.ReturnType == typeof(T)
+                        where method.GetParameters().Length == 1
+                        select method;
+
+                    foreach (var op in operators)
+                    {
+                        try
+                        {
+                            object result = ConvertFromString(input, op.GetParameters()[0].ParameterType);
+                            return (T)op.Invoke(null, new[] { result });
+                        }
+                        catch { }
+                    }
+                }
+
+                throw new InvalidOperationException(cannotConvert + typeof(T));
+            }
         }
 
         public static bool TryParseVector2(string s, NumberStyles style, IFormatProvider provider, out Vector2 result)
