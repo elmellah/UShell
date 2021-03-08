@@ -68,6 +68,8 @@ namespace UShell.Commands
             Shell.Main.RegisterCmd("webcam", this);
             Shell.Main.RegisterCmd("tier", this);
             Shell.Main.RegisterCmd("restart", this);
+
+            _lastTime = DateTime.Now;
         }
         void Update()
         {
