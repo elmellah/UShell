@@ -898,7 +898,7 @@ namespace UShell.Commands
         {
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = Environment.GetCommandLineArgs()[0];
-            psi.Arguments = Environment.CommandLine;
+            psi.Arguments = Environment.CommandLine.ReplaceFirst(Environment.GetCommandLineArgs()[0], "").TrimStart('"');
             psi.UseShellExecute = true;
             psi.CreateNoWindow = false;
             psi.WindowStyle = ProcessWindowStyle.Normal;
