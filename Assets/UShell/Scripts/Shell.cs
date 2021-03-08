@@ -863,7 +863,7 @@ namespace UShell
                     for (int j = 0; j < args.Length; j++)
                     {
                         if (parameters[j].ParameterType.IsByRef && !parameters[j].IsIn)
-                            SetVariableValue(fields[j], args[j].ToString());
+                            SetVariableValue(fields[j], Utils.ConvertToString(args[j]));
                     }
 
                     if (returnValue != null)
