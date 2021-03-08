@@ -2104,10 +2104,18 @@ namespace UShell
                 mb.CreateGlobalFunctions();
                 MethodInfo eventHandler = mb.GetMethod(this.Name);
                 Delegate handler = Delegate.CreateDelegate(this.EventHandlerType, eventHandler);
-                foreach (var target in instances[this.DeclaringType])
+                if (this.IsStatic)
                 {
-                    _event.AddEventHandler(target, handler);
-                    _targetsAndHandlers.Add(new Tuple<object, Delegate>(target, handler));
+                    _event.AddEventHandler(null, handler);
+                    _targetsAndHandlers.Add(new Tuple<object, Delegate>(null, handler));
+                }
+                else
+                {
+                    foreach (var target in instances[this.DeclaringType])
+                    {
+                        _event.AddEventHandler(target, handler);
+                        _targetsAndHandlers.Add(new Tuple<object, Delegate>(target, handler));
+                    }
                 }
             }
             public void RemoveAllEventHandlers()
