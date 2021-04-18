@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -806,7 +807,7 @@ namespace UShell
             else
                 Debug.LogWarning(string.Format(tooManyArgs, label));
         }
-        private void processMethod(string source, List<MethodCmd> methodCmds, string label, string[] fields)
+        private async void processMethod(string source, List<MethodCmd> methodCmds, string label, string[] fields)
         {
             const string noInstances = "shell: {0}: no instances registered for {1}";
             const string wrongSyntax = "shell: {0}: wrongSyntax";
@@ -858,7 +859,7 @@ namespace UShell
                 {
                     object returnValue = null;
                     for (int j = 0; j < instances.Count; j++)
-                        returnValue = methodCmds[i].Invoke(instances[j], args);
+                        returnValue = await methodCmds[i].Invoke(instances[j], args);
 
                     for (int j = 0; j < args.Length; j++)
                     {
@@ -1963,6 +1964,7 @@ namespace UShell
             public bool IsStatic { get => _method.IsStatic; }
             public int ParametersCount { get => _parameters.Length; }
             public ParameterInfo[] Parameters { get => _parameters; }
+            public bool IsAwaitable { get => _method.IsAwaitable(); }
 
             public string Name
             {
@@ -1994,9 +1996,17 @@ namespace UShell
                 _parameters = _method.GetParameters();
             }
 
-            public object Invoke(object obj, object[] parameters)
+            public async Task<object> Invoke(object obj, object[] parameters)
             {
-                return _method.Invoke(obj, parameters);
+                if (IsAwaitable)
+                {
+                    return await (dynamic)_method.Invoke(obj, parameters);
+                }
+                else
+                {
+                    object result = _method.Invoke(obj, parameters);
+                    return await Task.FromResult(result);
+                }
             }
         }
         private struct EventCmd

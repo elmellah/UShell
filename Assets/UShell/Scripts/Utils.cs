@@ -1107,6 +1107,32 @@ namespace UShell
 
             return str;
         }
+
+        public static bool IsAwaitable(this MethodInfo method)
+        {
+            if (method == null)
+                throw new ArgumentNullException(nameof(method));
+
+            return IsAwaitable(method.ReturnType);
+        }
+        public static bool IsAwaitable(this Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            MethodInfo getAwaiter = type.GetMethod("GetAwaiter", BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+            if (getAwaiter != null)
+                return IsAwaiter(getAwaiter.ReturnType);
+
+            return false;
+        }
+        public static bool IsAwaiter(this Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            return type.GetInterface("System.Runtime.CompilerServices.ICriticalNotifyCompletion") != null;
+        }
         #endregion
     }
 }
