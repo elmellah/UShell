@@ -6,7 +6,6 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -886,6 +885,54 @@ namespace UShell
         }
         #endregion
 
+        #region FONTS
+        public Font GetFont(string name)
+        {
+            Font font;
+            UFont uFont;
+
+            if (_uFonts.ContainsKey(name))
+                return _uFonts[name].font;
+
+            if (name == "Arial")
+            {
+                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (font != null)
+                {
+                    uFont = new UFont(FontType.BUILTIN, font);
+                    _uFonts.Add(name, uFont);
+                    return font;
+                }
+            }
+
+            font = Resources.Load<Font>(name);
+            if (font != null)
+            {
+                uFont = new UFont(FontType.RESOURCE, font);
+                _uFonts.Add(name, uFont);
+                return font;
+            }
+
+            string[] fontNames = Font.GetOSInstalledFontNames();
+            if (Array.IndexOf<string>(fontNames, name) > 0)
+            {
+                font = Font.CreateDynamicFontFromOSFont(name, 1);
+                uFont = new UFont(FontType.FILE, font);
+                _uFonts.Add(name, uFont);
+                return font;
+            }
+
+            return null;
+        }
+        private void deleteAllFonts()
+        {
+            foreach (UFont uFont in _uFonts.Values)
+                uFont.Free();
+
+            _uFonts.Clear();
+        }
+        #endregion
+
         #region OTHER
         /// <summary>
         /// 
@@ -1717,589 +1764,5 @@ namespace UShell
         }
         #endregion
         #endregion
-
-        #region TYPES
-        private class History
-        {
-            private string[] _values = new string[10];
-            private string _name = "history";
-            private int _pos;
-            private int _count;
-
-            public int Count { get { return _count; } }
-
-            public History() { }
-            public History(int capacity)
-            {
-                _values = new string[capacity];
-            }
-            public History(string name)
-            {
-                _name = name;
-            }
-            public History(int capacity, string name)
-            {
-                _values = new string[capacity];
-                _name = name;
-            }
-
-            public void Clear()
-            {
-                _pos = _count = 0;
-            }
-
-            public void SaveToDisk()
-            {
-                StringBuilder history = new StringBuilder();
-
-                for (int i = _count; i >= 1; i--)
-                    history.Append(GetValue(i) + "\n");
-
-                try
-                {
-                    PlayerPrefs.SetString(_name, history.ToString());
-                }
-                catch (PlayerPrefsException e)
-                {
-                    Debug.LogError(e.Message);
-                }
-            }
-            public void LoadFromDisk()
-            {
-                string history = PlayerPrefs.GetString(_name);
-                string[] split = history.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-                for (int i = 0; i < _values.Length; i++)
-                {
-                    if (i >= split.Length)
-                        break;
-
-                    _values[i] = split[i];
-                }
-
-                _count = Math.Min(split.Length, _values.Length);
-                if (_count == _values.Length)
-                    _pos = 0;
-                else
-                    _pos = _count;
-            }
-
-            public string GetValue(int index)
-            {
-                if (index <= 0 || index > _values.Length)
-                    return null;
-
-                int targetPos = (_pos - index + _values.Length) % _values.Length;
-                return _values[targetPos];
-            }
-            public void AddValue(string value)
-            {
-                _values[_pos] = value;
-                _pos = (_pos + 1) % _values.Length;
-                _count = Math.Min(_values.Length, _count + 1);
-            }
-        }
-
-        private struct ConvarCmd
-        {
-            private FieldInfo _fieldInfo;
-            private PropertyInfo _propertyInfo;
-
-
-            public bool IsValid { get => IsField ^ IsProperty; }
-            public bool IsField { get => _fieldInfo != null; }
-            public bool IsProperty { get => _propertyInfo != null; }
-
-            public Type Type
-            {
-                get
-                {
-                    if (IsField) return _fieldInfo.FieldType;
-                    if (IsProperty) return _propertyInfo.PropertyType;
-
-                    return typeof(object);
-                }
-            }
-            public Type DeclaringType
-            {
-                get
-                {
-                    if (IsField) return _fieldInfo.DeclaringType;
-                    if (IsProperty) return _propertyInfo.DeclaringType;
-
-                    return typeof(object);
-                }
-            }
-            public bool IsStatic
-            {
-                get
-                {
-                    if (IsField)
-                        return _fieldInfo.IsStatic;
-                    if (IsProperty)
-                    {
-                        MethodInfo methodInfo = _propertyInfo.GetMethod;
-                        if (methodInfo != null)
-                            return methodInfo.IsStatic;
-                    }
-
-                    return true;
-                }
-            }
-
-            public string Name
-            {
-                get
-                {
-                    if (IsField)
-                    {
-                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
-                            return attribute.Label;
-                        else
-                            return _fieldInfo.Name;
-                    }
-                    if (IsProperty)
-                    {
-                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
-                            return attribute.Label;
-                        else
-                            return _propertyInfo.Name;
-                    }
-
-                    return "";
-                }
-            }
-            public string Info
-            {
-                get
-                {
-                    if (IsField)
-                    {
-                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
-                            return attribute.Info;
-                    }
-                    if (IsProperty)
-                    {
-                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
-                            return attribute.Info;
-                    }
-
-                    return "";
-                }
-            }
-            public bool CanRead
-            {
-                get
-                {
-                    if (IsField)
-                        return true;
-                    if (IsProperty)
-                        return _propertyInfo.CanRead;
-
-                    return false;
-                }
-            }
-            public bool CanWrite
-            {
-                get
-                {
-                    if (IsField)
-                    {
-                        ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null)
-                            return !attribute.ReadOnly;
-                    }
-                    if (IsProperty)
-                    {
-                        ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
-                        if (attribute != null)
-                            return _propertyInfo.CanWrite && !attribute.ReadOnly;
-                    }
-
-                    return false;
-                }
-            }
-
-
-            public ConvarCmd(FieldInfo fieldInfo)
-            {
-                _fieldInfo = fieldInfo;
-                _propertyInfo = null;
-            }
-            public ConvarCmd(PropertyInfo propertyInfo)
-            {
-                _fieldInfo = null;
-                _propertyInfo = propertyInfo;
-            }
-
-            public object GetValue(object obj)
-            {
-                if (IsField)
-                    return _fieldInfo.GetValue(obj);
-                else if (IsProperty)
-                    return _propertyInfo.GetValue(obj);
-
-                return null;
-            }
-            public void SetValue(object obj, object value)
-            {
-                if (IsField)
-                    _fieldInfo.SetValue(obj, value);
-                else if (IsProperty)
-                    _propertyInfo.SetValue(obj, value);
-            }
-        }
-        private struct MethodCmd
-        {
-            private MethodInfo _method;
-            private ParameterInfo[] _parameters;
-
-
-            public Type ReturnType { get => _method.ReturnType; }
-            public Type DeclaringType { get => _method.DeclaringType; }
-            public bool IsStatic { get => _method.IsStatic; }
-            public int ParametersCount { get => _parameters.Length; }
-            public ParameterInfo[] Parameters { get => _parameters; }
-            public bool IsAwaitable { get => _method.IsAwaitable(); }
-
-            public string Name
-            {
-                get
-                {
-                    CmdAttribute attribute = _method.GetCustomAttribute<CmdAttribute>();
-                    if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
-                        return attribute.Label;
-
-                    return _method.Name;
-                }
-            }
-            public string Info
-            {
-                get
-                {
-                    CmdAttribute attribute = _method.GetCustomAttribute<CmdAttribute>();
-                    if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
-                        return attribute.Info;
-
-                    return "";
-                }
-            }
-
-
-            public MethodCmd(MethodInfo methodInfo)
-            {
-                _method = methodInfo;
-                _parameters = _method.GetParameters();
-            }
-
-            public async Task<object> Invoke(object obj, object[] parameters)
-            {
-                if (IsAwaitable)
-                {
-                    return await (dynamic)_method.Invoke(obj, parameters);
-                }
-                else
-                {
-                    object result = _method.Invoke(obj, parameters);
-                    return await Task.FromResult(result);
-                }
-            }
-        }
-        private struct EventCmd
-        {
-            private EventInfo _event;
-            private MethodInfo _invoke;
-            private ParameterInfo[] _parameters;
-            private MethodInfo _addMethod;
-
-            private List<Tuple<object, Delegate>> _targetsAndHandlers;
-
-
-            public Type ReturnType { get => _invoke.ReturnType; }
-            public Type DeclaringType { get => _event.DeclaringType; }
-            public Type EventHandlerType { get => _event.EventHandlerType; }
-            public bool IsStatic { get => _addMethod.IsStatic; }
-            public int ParametersCount { get => _parameters.Length; }
-            public Type[] ParametersTypes
-            {
-                get
-                {
-                    Type[] paramTypes = new Type[_parameters.Length];
-                    for (int j = 0; j < _parameters.Length; j++)
-                        paramTypes[j] = _parameters[j].ParameterType;
-
-                    return paramTypes;
-                }
-            }
-
-            public string Name
-            {
-                get
-                {
-                    EventAttribute attribute = _event.GetCustomAttribute<EventAttribute>();
-                    if (attribute != null && !string.IsNullOrEmpty(attribute.Label))
-                        return attribute.Label;
-
-                    return _event.Name;
-                }
-            }
-            public string Info
-            {
-                get
-                {
-                    EventAttribute attribute = _event.GetCustomAttribute<EventAttribute>();
-                    if (attribute != null && !string.IsNullOrEmpty(attribute.Info))
-                        return attribute.Info;
-
-                    return "";
-                }
-            }
-
-
-            public EventCmd(EventInfo eventInfo)
-            {
-                _event = eventInfo;
-                _invoke = eventInfo.EventHandlerType.GetMethod("Invoke");
-                _parameters = _invoke.GetParameters();
-                _addMethod = eventInfo.GetAddMethod();
-
-                _targetsAndHandlers = new List<Tuple<object, Delegate>>();
-            }
-
-            public void AddEventHandler(string cmdLine, AssemblyBuilder assemblyBuilder, Dictionary<Type, List<object>> instances)
-            {
-                ModuleBuilder mb = assemblyBuilder.DefineDynamicModule(this.Name + "_" + Environment.TickCount); //Environment.TickCount: the module name must be unique
-                MethodBuilder meb = mb.DefineGlobalMethod(this.Name, MethodAttributes.Public | MethodAttributes.Static, this.ReturnType, this.ParametersTypes);
-                ILGenerator il = meb.GetILGenerator();
-
-                #region CIL
-                MethodInfo processCmdLineMethod = typeof(Shell).GetMethod(nameof(Shell.ProcessCmdLine), new Type[] { typeof(string), typeof(string) });
-                MethodInfo mainPropertyMethod = typeof(Shell).GetProperty(nameof(Shell.Main), typeof(Shell)).GetMethod;
-                MethodInfo setVariableValueMethod = typeof(Shell).GetMethod(nameof(Shell.SetVariableValue), BindingFlags.Public | BindingFlags.Instance);
-                MethodInfo convertToStringMethod = typeof(Utils).GetMethod(nameof(Utils.ConvertToString), BindingFlags.Public | BindingFlags.Static);
-
-                il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
-                il.Emit(OpCodes.Ldstr, "0");
-                il.Emit(OpCodes.Ldstr, this.Name);
-                il.EmitCall(OpCodes.Call, setVariableValueMethod, null);
-
-                for (int i = 0; i < this.ParametersTypes.Length; i++)
-                {
-                    il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
-                    il.Emit(OpCodes.Ldstr, (i + 1).ToString());
-                    il.Emit(OpCodes.Ldarg, i);
-                    if (this.ParametersTypes[i].IsValueType)
-                        il.Emit(OpCodes.Box, this.ParametersTypes[i]);
-                    il.EmitCall(OpCodes.Call, convertToStringMethod, null);
-                    il.EmitCall(OpCodes.Call, setVariableValueMethod, null);
-                }
-
-                il.EmitCall(OpCodes.Call, mainPropertyMethod, null);
-                il.Emit(OpCodes.Ldstr, this.Name);
-                il.Emit(OpCodes.Ldstr, cmdLine);
-                il.EmitCall(OpCodes.Call, processCmdLineMethod, null);
-                if (this.ReturnType != typeof(void))
-                {
-                    //There is currently no way of knowing what a command returns, so we return 0 or null
-                    if (this.ReturnType.IsValueType) il.Emit(OpCodes.Ldc_I4_0);
-                    else il.Emit(OpCodes.Ldnull);
-                }
-                il.Emit(OpCodes.Ret);
-                #endregion CIL
-
-                mb.CreateGlobalFunctions();
-                MethodInfo eventHandler = mb.GetMethod(this.Name);
-                Delegate handler = Delegate.CreateDelegate(this.EventHandlerType, eventHandler);
-                if (this.IsStatic)
-                {
-                    _event.AddEventHandler(null, handler);
-                    _targetsAndHandlers.Add(new Tuple<object, Delegate>(null, handler));
-                }
-                else
-                {
-                    foreach (var target in instances[this.DeclaringType])
-                    {
-                        _event.AddEventHandler(target, handler);
-                        _targetsAndHandlers.Add(new Tuple<object, Delegate>(target, handler));
-                    }
-                }
-            }
-            public void RemoveAllEventHandlers()
-            {
-                foreach (var e in _targetsAndHandlers)
-                    _event.RemoveEventHandler(e.Item1, e.Item2);
-            }
-        }
-        #endregion
-
-        #region FONTS
-        private enum FontType
-        {
-            BUILTIN,
-            RESOURCE,
-            FILE
-        }
-        private class UFont
-        {
-            public readonly FontType fontType;
-            public readonly Font font;
-
-            public UFont(FontType fontType, Font font)
-            {
-                this.fontType = fontType;
-                this.font = font;
-            }
-            public void Free()
-            {
-                if (fontType == FontType.RESOURCE)
-                    Resources.UnloadAsset(font);
-                else if (fontType == FontType.FILE)
-                    Font.Destroy(font);
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public Font GetFont(string name)
-        {
-            Font font;
-            UFont uFont;
-
-            if (_uFonts.ContainsKey(name))
-                return _uFonts[name].font;
-
-            if (name == "Arial")
-            {
-                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                if (font != null)
-                {
-                    uFont = new UFont(FontType.BUILTIN, font);
-                    _uFonts.Add(name, uFont);
-                    return font;
-                }
-            }
-
-            font = Resources.Load<Font>(name);
-            if (font != null)
-            {
-                uFont = new UFont(FontType.RESOURCE, font);
-                _uFonts.Add(name, uFont);
-                return font;
-            }
-
-            string[] fontNames = Font.GetOSInstalledFontNames();
-            if (Array.IndexOf<string>(fontNames, name) > 0)
-            {
-                font = Font.CreateDynamicFontFromOSFont(name, 1);
-                uFont = new UFont(FontType.FILE, font);
-                _uFonts.Add(name, uFont);
-                return font;
-            }
-
-            return null;
-        }
-        private void deleteAllFonts()
-        {
-            foreach (UFont uFont in _uFonts.Values)
-                uFont.Free();
-
-            _uFonts.Clear();
-        }
-        #endregion
-    }
-
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class ConvarAttribute : Attribute
-    {
-        public string Label { get; }
-        public string Info { get; }
-        public bool ReadOnly { get; }
-
-        public ConvarAttribute() { }
-        public ConvarAttribute(string label)
-        {
-            this.Label = label;
-        }
-        public ConvarAttribute(string label, string info)
-        {
-            this.Label = label;
-            this.Info = info;
-        }
-        public ConvarAttribute(string label, string info, bool readOnly)
-        {
-            this.Label = label;
-            this.Info = info;
-            this.ReadOnly = readOnly;
-        }
-    }
-    [AttributeUsage(AttributeTargets.Method)]
-    public class CmdAttribute : Attribute
-    {
-        public string Label { get; }
-        public string Info { get; }
-
-        public CmdAttribute() { }
-        public CmdAttribute(string label)
-        {
-            this.Label = label;
-        }
-        public CmdAttribute(string label, string info)
-        {
-            this.Label = label;
-            this.Info = info;
-        }
-    }
-    [AttributeUsage(AttributeTargets.Event)]
-    public class EventAttribute : Attribute
-    {
-        public string Label { get; }
-        public string Info { get; }
-
-        public EventAttribute() { }
-        public EventAttribute(string label)
-        {
-            this.Label = label;
-        }
-        public EventAttribute(string label, string info)
-        {
-            this.Label = label;
-            this.Info = info;
-        }
-    }
-
-    public interface IConsole
-    {
-        void Init(bool headless);
-        void AddLog(Log log);
-        bool ProcessEvent(string label, string[] args);
-    }
-    public interface ICommand
-    {
-        string[] GetSyntaxes(string label);
-        string[] GetInfos(string label);
-        string GetCompletion(string label, string[] args, out List<string> options);
-
-        void Execute(string label, string[] args);
-    }
-
-    public class Log
-    {
-        public LogType LogType { get; }
-        public string Value { get; }
-        public string StackTrace { get; }
-
-        public Log(LogType logType, string value, string stackTrace)
-        {
-            LogType = logType;
-            Value = value;
-            StackTrace = stackTrace;
-        }
     }
 }
