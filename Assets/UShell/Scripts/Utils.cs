@@ -187,6 +187,9 @@ namespace UShell
             const string invalidValue = "invalid value";
             const string cannotConvert = "no converter available for ";
 
+            if (!typeof(T).IsValueType && input == "null")
+                return default(T);
+
             TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter.CanConvertFrom(typeof(string)))
             {
