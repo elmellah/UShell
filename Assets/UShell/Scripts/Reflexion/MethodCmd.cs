@@ -6,17 +6,15 @@ namespace UShell
 {
     internal struct MethodCmd
     {
+        #region FIELDS
         private MethodInfo _method;
         private ParameterInfo[] _parameters;
+        #endregion
 
-
-        public Type ReturnType { get => _method.ReturnType; }
+        #region PROPERTIES
         public Type DeclaringType { get => _method.DeclaringType; }
         public bool IsStatic { get => _method.IsStatic; }
-        public int ParametersCount { get => _parameters.Length; }
         public ParameterInfo[] Parameters { get => _parameters; }
-        public bool IsAwaitable { get => _method.IsAwaitable(); }
-
         public string Name
         {
             get
@@ -40,24 +38,87 @@ namespace UShell
             }
         }
 
+        private int paramCountMax { get => _parameters.Length; }
+        private int paramCountMin
+        {
+            get
+            {
+                for (int i = 0; i < _parameters.Length; i++)
+                {
+                    if (_parameters[i].HasDefaultValue)
+                        return i;
+                }
 
+                return _parameters.Length;
+            }
+        }
+        #endregion
+
+        #region CONSTRUCTORS
         public MethodCmd(MethodInfo methodInfo)
         {
             _method = methodInfo;
             _parameters = _method.GetParameters();
         }
+        #endregion
 
-        public async Task<object> Invoke(object obj, object[] parameters)
+        #region METHODS
+        public bool CanInvoke(int paramCount)
         {
-            if (IsAwaitable)
+            if (paramCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(paramCount), $"{nameof(paramCount)} < 0");
+
+            if ((_parameters.Length == 0 && paramCount != 0) || paramCount > _parameters.Length)
+                return false;
+
+            for (int i = 0; i < _parameters.Length; i++)
             {
-                return await (dynamic)_method.Invoke(obj, parameters);
+                if (i >= paramCount && !_parameters[i].HasDefaultValue)
+                    return false;
+            }
+
+            return true;
+        }
+        public async Task<object> Invoke(object obj, object[] args)
+        {
+            var exception = new ArgumentException(nameof(args), "wrong args count");
+
+            if ((_parameters.Length == 0 && args.Length != 0) || args.Length > _parameters.Length)
+                return Task.FromException(exception);
+
+            object[] providedArgs = args;
+            args = new object[_parameters.Length];
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (i < providedArgs.Length)
+                    args[i] = providedArgs[i];
+                else if (_parameters[i].HasDefaultValue)
+                    args[i] = _parameters[i].DefaultValue;
+                else
+                    return Task.FromException(exception);
+            }
+
+            if (_method.IsAwaitable())
+            {
+                return await (dynamic)_method.Invoke(obj, args);
             }
             else
             {
-                object result = _method.Invoke(obj, parameters);
+                object result = _method.Invoke(obj, args);
                 return await Task.FromResult(result);
             }
         }
+
+        public static bool AreCompatible(MethodCmd a, MethodCmd b)
+        {
+            if (a.paramCountMin < b.paramCountMin && a.paramCountMax < b.paramCountMin)
+                return true;
+
+            if (a.paramCountMin > b.paramCountMax && a.paramCountMax > b.paramCountMax)
+                return true;
+
+            return false;
+        }
+        #endregion
     }
 }

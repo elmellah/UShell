@@ -528,7 +528,7 @@ namespace UShell
             else
             {
                 for (int i = 0; i < _methods[label].Count; i++)
-                    if (methodCmd.ParametersCount == _methods[label][i].ParametersCount || methodCmd.DeclaringType != _methods[label][i].DeclaringType)
+                    if (methodCmd.DeclaringType != _methods[label][i].DeclaringType || !MethodCmd.AreCompatible(methodCmd, _methods[label][i]))
                         return;
 
                 _methods[label].Add(methodCmd);
@@ -814,8 +814,7 @@ namespace UShell
 
             for (int i = 0; i < methodCmds.Count; i++)
             {
-                ParameterInfo[] parameters = methodCmds[i].Parameters;
-                if (parameters.Length != fields.Length)
+                if (!methodCmds[i].CanInvoke(fields.Length))
                     continue;
 
                 List<object> instances;
@@ -830,6 +829,7 @@ namespace UShell
                     return;
                 }
 
+                ParameterInfo[] parameters = methodCmds[i].Parameters;
                 object[] args = new object[fields.Length];
                 for (int j = 0; j < args.Length; j++)
                 {
@@ -1753,6 +1753,9 @@ namespace UShell
                         strBuilder.Append(parameterInfos[i].ParameterType.GetElementType().Name);
                     else
                         strBuilder.Append(parameterInfos[i].ParameterType.Name);
+
+                    if (parameterInfos[i].HasDefaultValue)
+                        strBuilder.Append("=" + (parameterInfos[i].DefaultValue ?? "null"));
                 }
 
                 string info = method.Info;
