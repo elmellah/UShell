@@ -2,19 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
 
 namespace UShell
 {
     internal struct EventCmd
     {
+        #region FIELDS
         private EventInfo _event;
         private MethodInfo _invoke;
         private ParameterInfo[] _parameters;
         private MethodInfo _addMethod;
 
         private List<Tuple<object, Delegate>> _targetsAndHandlers;
+        #endregion
 
-
+        #region PROPERTIES
         public Type ReturnType { get => _invoke.ReturnType; }
         public Type DeclaringType { get => _event.DeclaringType; }
         public Type EventHandlerType { get => _event.EventHandlerType; }
@@ -54,8 +57,9 @@ namespace UShell
                 return "";
             }
         }
+        #endregion
 
-
+        #region CONSTRUCTORS
         public EventCmd(EventInfo eventInfo)
         {
             _event = eventInfo;
@@ -65,7 +69,9 @@ namespace UShell
 
             _targetsAndHandlers = new List<Tuple<object, Delegate>>();
         }
+        #endregion
 
+        #region METHODS
         public void AddEventHandler(string cmdLine, AssemblyBuilder assemblyBuilder, Dictionary<Type, List<object>> instances)
         {
             ModuleBuilder mb = assemblyBuilder.DefineDynamicModule(this.Name + "_" + Environment.TickCount); //Environment.TickCount: the module name must be unique
@@ -129,5 +135,17 @@ namespace UShell
             foreach (var e in _targetsAndHandlers)
                 _event.RemoveEventHandler(e.Item1, e.Item2);
         }
+
+        public override string ToString()
+        {
+            StringBuilder result = new StringBuilder(Name);
+
+            string info = Info;
+            if (!string.IsNullOrEmpty(info))
+                result.Append(": ").Append(info);
+
+            return result.ToString();
+        }
+        #endregion
     }
 }

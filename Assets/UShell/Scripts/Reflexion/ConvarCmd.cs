@@ -1,14 +1,17 @@
 using System;
 using System.Reflection;
+using System.Text;
 
 namespace UShell
 {
     internal struct ConvarCmd
     {
+        #region FIELDS
         private FieldInfo _fieldInfo;
         private PropertyInfo _propertyInfo;
+        #endregion
 
-
+        #region PROPERTIES
         public bool IsValid { get => IsField ^ IsProperty; }
         public bool IsField { get => _fieldInfo != null; }
         public bool IsProperty { get => _propertyInfo != null; }
@@ -126,8 +129,9 @@ namespace UShell
                 return false;
             }
         }
+        #endregion
 
-
+        #region CONSTRUCTORS
         public ConvarCmd(FieldInfo fieldInfo)
         {
             _fieldInfo = fieldInfo;
@@ -138,7 +142,9 @@ namespace UShell
             _fieldInfo = null;
             _propertyInfo = propertyInfo;
         }
+        #endregion
 
+        #region METHODS
         public object GetValue(object obj)
         {
             if (IsField)
@@ -155,5 +161,21 @@ namespace UShell
             else if (IsProperty)
                 _propertyInfo.SetValue(obj, value);
         }
+
+        public override string ToString()
+        {
+            StringBuilder result = new StringBuilder(Name);
+
+            if (CanWrite)
+                result.Append(string.Format(" [{0}]", Type.Name));
+
+            string info = Info;
+            if (!string.IsNullOrEmpty(info))
+                result.Append(": ").Append(info);
+
+
+            return result.ToString();
+        }
+        #endregion
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace UShell
@@ -119,6 +120,39 @@ namespace UShell
                 return true;
 
             return false;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder result = new StringBuilder(Name);
+
+            for (int i = 0; i < _parameters.Length; i++)
+            {
+                result.Append(" ");
+                if (_parameters[i].IsOut)
+                    result.Append("[out]");
+                else if (_parameters[i].ParameterType.IsByRef && !_parameters[i].IsIn)
+                    result.Append("[ref]");
+
+                result.Append(_parameters[i].Name);
+                result.Append(":");
+                if (_parameters[i].ParameterType.IsByRef)
+                    result.Append(_parameters[i].ParameterType.GetElementType().Name);
+                else
+                    result.Append(_parameters[i].ParameterType.Name);
+
+                if (_parameters[i].HasDefaultValue)
+                {
+                    result.Append("=");
+                    result.Append(_parameters[i].DefaultValue ?? "null");
+                }
+            }
+
+            string info = Info;
+            if (!string.IsNullOrEmpty(info))
+                result.Append(": " + info);
+
+            return result.ToString();
         }
         #endregion
     }
