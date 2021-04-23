@@ -660,6 +660,7 @@ namespace UShell
                 catch (Exception e)
                 {
                     Debug.LogError(string.Format(exceptionMessage, pair.Key + label, e.Message));
+                    Debug.LogException(e);
                     eventCatch = true;
                 }
             }
@@ -679,6 +680,7 @@ namespace UShell
                 catch (Exception e)
                 {
                     Debug.LogError(string.Format(exceptionMessage, label, e.Message));
+                    Debug.LogException(e);
                     eventCatch = true;
                 }
             }
@@ -711,6 +713,7 @@ namespace UShell
             catch (Exception e)
             {
                 Debug.LogError(string.Format(exceptionMessage, label, e.Message));
+                Debug.LogException(e);
             }
         }
         private void processConvar(string source, Convar convar, string label, string[] fields)
@@ -737,18 +740,19 @@ namespace UShell
             {
                 if (convar.CanRead)
                 {
-                    StringBuilder log = new StringBuilder();
                     try
                     {
+                        StringBuilder log = new StringBuilder();
                         for (int i = 0; i < instances.Count; i++)
                             log.Append(Utils.ConvertToString(convar.GetValue(instances[i])));
+
+                        Debug.Log(log);
                     }
                     catch (Exception e)
                     {
                         Debug.LogError(string.Format(exception, label, e.Message));
+                        Debug.LogException(e);
                     }
-
-                    Debug.Log(log);
                 }
                 else
                     Debug.LogWarning(string.Format(cannotRead, label));
@@ -776,6 +780,7 @@ namespace UShell
                     catch (Exception e)
                     {
                         Debug.LogError(string.Format(exception, label, e.Message));
+                        Debug.LogException(e);
                     }
                 }
                 else
@@ -850,6 +855,7 @@ namespace UShell
                 catch (Exception e)
                 {
                     Debug.LogError(string.Format(exception, label, e.Message));
+                    Debug.LogException(e);
                     return;
                 }
 
