@@ -106,7 +106,7 @@ namespace UShell
                 "Heathen",
         };
 
-        private string _ID = String.Empty;
+        private string _ID = string.Empty;
 
         private History _history;
 
@@ -1226,52 +1226,22 @@ namespace UShell
         {
             switch (label)
             {
-                case "README":
-                    executeREADME(args);
-                    break;
-                case "echo":
-                    executeEcho(args);
-                    break;
-                case "alias":
-                    executeAlias(args);
-                    break;
-                case "unalias":
-                    executeUnalias(args);
-                    break;
-                case "history":
-                    executeHistory(args);
-                    break;
-                case "help":
-                    executeHelp(args);
-                    break;
-                case "version":
-                    executeVersion(args);
-                    break;
-                case "throw":
-                    executeThrow(args);
-                    break;
-                case "type":
-                    executeType(args);
-                    break;
+                case "README":      executeREADME(args); break;
+                case "echo":        executeEcho(args); break;
+                case "alias":       executeAlias(args); break;
+                case "unalias":     executeUnalias(args); break;
+                case "history":     executeHistory(args); break;
+                case "help":        executeHelp(args); break;
+                case "version":     executeVersion(args); break;
+                case "throw":       executeThrow(args); break;
+                case "type":        executeType(args); break;
                 case ".":
-                case "source":
-                    executeSource(args);
-                    break;
-                case "font":
-                    executeFont(args);
-                    break;
-                case "args":
-                    executeArgs(args);
-                    break;
-                case "convar":
-                    executeConvar(args);
-                    break;
-                case "event":
-                    executeEvent(args);
-                    break;
-                case "reflex":
-                    executeReflex(args);
-                    break;
+                case "source":      executeSource(args); break;
+                case "font":        executeFont(args); break;
+                case "args":        executeArgs(args); break;
+                case "convar":      executeConvar(args); break;
+                case "event":       executeEvent(args); break;
+                case "reflex":      executeReflex(args); break;
             }
         }
 
