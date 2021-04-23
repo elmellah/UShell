@@ -306,21 +306,14 @@ namespace UShell
         /// <param name="console"></param>
         public void RegisterConsole(string id, IConsole console)
         {
-            if (id == null || console == null)
-            {
-                console.AddLog(new Log(LogType.Error, "shell: cannot register console (id or console null)", String.Empty));
-                return;
-            }
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (console == null)
+                throw new ArgumentNullException(nameof(console));
             if (_consoles.ContainsKey(id))
-            {
-                console.AddLog(new Log(LogType.Error, "shell: cannot register console (id already used)", String.Empty));
-                return;
-            }
+                throw new ArgumentException("already used", nameof(id));
             if (_consoles.ContainsValue(console))
-            {
-                console.AddLog(new Log(LogType.Error, "shell: cannot register console (console already registered)", String.Empty));
-                return;
-            }
+                throw new ArgumentException("already registered", nameof(console));
 
             _consoles.Add(id, console);
             console.Init(_isHeadless);
@@ -333,11 +326,10 @@ namespace UShell
         /// <returns></returns>
         public bool UnregisterConsole(string id, IConsole console)
         {
-            if (id == null || console == null)
-            {
-                console.AddLog(new Log(LogType.Error, "shell: cannot unregister console (id or console null)", String.Empty));
-                return false;
-            }
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (console == null)
+                throw new ArgumentNullException(nameof(console));
 
             return _consoles.Remove(id);
         }
@@ -348,16 +340,12 @@ namespace UShell
         /// <param name="command"></param>
         public void RegisterCmd(string id, ICommand command)
         {
-            if (id == null || command == null)
-            {
-                Debug.LogError("shell: cannot register command (id or command null)");
-                return;
-            }
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
             if (_cmds.ContainsKey(id))
-            {
-                Debug.LogError("shell: cannot register command \"" + id + "\" (id already used)");
-                return;
-            }
+                throw new ArgumentException("already used", nameof(id));
 
             _cmds.Add(id, command);
         }
@@ -369,11 +357,10 @@ namespace UShell
         /// <returns></returns>
         public bool UnregisterCmd(string id, ICommand command)
         {
-            if (id == null || command == null)
-            {
-                Debug.LogError("shell: cannot unregister command (id or command null)");
-                return false;
-            }
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
 
             return _cmds.Remove(id);
         }
@@ -385,10 +372,7 @@ namespace UShell
         public void RegisterInstance(object instance)
         {
             if (instance == null)
-            {
-                Debug.LogError("shell: cannot register instance (instance null)");
-                return;
-            }
+                throw new ArgumentNullException(nameof(instance));
 
             registerInstanceInternal(instance, instance.GetType());
         }
@@ -410,10 +394,7 @@ namespace UShell
         public bool UnregisterInstance(object instance)
         {
             if (instance == null)
-            {
-                Debug.LogError("shell: cannot unregister instance (instance null)");
-                return false;
-            }
+                throw new ArgumentNullException(nameof(instance));
 
             return unregisterInstanceInternal(instance, instance.GetType());
         }
@@ -485,25 +466,25 @@ namespace UShell
         {
             for (int i = 0; i < types.Length; i++)
             {
-                FieldInfo[] fieldInfos = types[i].GetFields(_bindingFlags);
-                for (int j = 0; j < fieldInfos.Length; j++)
-                    if (Attribute.IsDefined(fieldInfos[j], typeof(ConvarAttribute), false))
-                        registerConvar(new Convar(fieldInfos[j]));
+                FieldInfo[] fields = types[i].GetFields(_bindingFlags);
+                for (int j = 0; j < fields.Length; j++)
+                    if (Attribute.IsDefined(fields[j], typeof(ConvarAttribute), false))
+                        registerConvar(new Convar(fields[j]));
 
-                PropertyInfo[] propertyInfos = types[i].GetProperties(_bindingFlags);
-                for (int j = 0; j < propertyInfos.Length; j++)
-                    if (Attribute.IsDefined(propertyInfos[j], typeof(ConvarAttribute), false))
-                        registerConvar(new Convar(propertyInfos[j]));
+                PropertyInfo[] properties = types[i].GetProperties(_bindingFlags);
+                for (int j = 0; j < properties.Length; j++)
+                    if (Attribute.IsDefined(properties[j], typeof(ConvarAttribute), false))
+                        registerConvar(new Convar(properties[j]));
 
-                MethodInfo[] methodInfos = types[i].GetMethods(_bindingFlags);
-                for (int j = 0; j < methodInfos.Length; j++)
-                    if (Attribute.IsDefined(methodInfos[j], typeof(CmdAttribute), false))
-                        registerMethod(new Method(methodInfos[j]));
+                MethodInfo[] methods = types[i].GetMethods(_bindingFlags);
+                for (int j = 0; j < methods.Length; j++)
+                    if (Attribute.IsDefined(methods[j], typeof(CmdAttribute), false))
+                        registerMethod(new Method(methods[j]));
 
-                EventInfo[] eventInfos = types[i].GetEvents(_bindingFlags);
-                for (int j = 0; j < eventInfos.Length; j++)
-                    if (Attribute.IsDefined(eventInfos[j], typeof(EventAttribute), false))
-                        registerEvent(new Event(eventInfos[j]));
+                EventInfo[] events = types[i].GetEvents(_bindingFlags);
+                for (int j = 0; j < events.Length; j++)
+                    if (Attribute.IsDefined(events[j], typeof(EventAttribute), false))
+                        registerEvent(new Event(events[j]));
             }
         }
         private void registerConvar(Convar convar)
