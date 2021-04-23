@@ -125,8 +125,6 @@ namespace UShell
         [Convar("headless", "is the current process running in batchmode?", true)]
         private bool _isHeadless = false;
 
-        private Stack<string> _usedAliases = new Stack<string>();
-
         private Dictionary<string, UFont> _uFonts = new Dictionary<string, UFont>();
         #endregion
 
@@ -567,11 +565,10 @@ namespace UShell
             try
             {
                 processCmdLineVisibility(source, cmdLine, saveToHistory);
-                processCmdLineInternal(source, cmdLine, _usedAliases);
+                processCmdLineInternal(source, cmdLine, new Stack<string>());
             }
             catch (Exception)
             {
-                _usedAliases.Clear();
                 Debug.LogError("shell: fatal error!");
                 throw;
             }
@@ -952,6 +949,10 @@ namespace UShell
         /// <returns></returns>
         public string GetCompletion(string prefix, out List<string> options)
         {
+            return getCompletionInternal(prefix, out options, new Stack<string>());
+        }
+        private string getCompletionInternal(string prefix, out List<string> options, Stack<string> usedAliases)
+        {
             //Potential variable assignments are not taken into account
 
             string label = "";
@@ -999,12 +1000,12 @@ namespace UShell
             else if (options.Count == 1)
             {
                 string labelFound = options[0];
-                if (!bypassAliases && !_usedAliases.Contains(labelFound) && _aliases.TryGetValue(labelFound, out string aliasValue))
+                if (!bypassAliases && !usedAliases.Contains(labelFound) && _aliases.TryGetValue(labelFound, out string aliasValue))
                 {
-                    _usedAliases.Push(labelFound);
+                    usedAliases.Push(labelFound);
                     prefix = prefix.ReplaceFirst(label, aliasValue);
-                    string completion = labelFound.Remove(0, label.Length) + GetCompletion(prefix, out options);
-                    _usedAliases.Pop();
+                    string completion = labelFound.Remove(0, label.Length) + getCompletionInternal(prefix, out options, usedAliases);
+                    usedAliases.Pop();
 
                     return completion;
                 }
