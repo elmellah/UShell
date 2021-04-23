@@ -98,15 +98,16 @@ namespace UShell
                     return Task.FromException(exception);
             }
 
+            object result;
             if (_method.IsAwaitable())
-            {
-                return await (dynamic)_method.Invoke(obj, args);
-            }
+                result = await (dynamic)_method.Invoke(obj, args);
             else
-            {
-                object result = _method.Invoke(obj, args);
-                return await Task.FromResult(result);
-            }
+                result = await Task.FromResult(_method.Invoke(obj, args));
+
+            for (int i = 0; i < providedArgs.Length; i++)
+                providedArgs[i] = args[i];
+
+            return result;
         }
 
         public static bool AreCompatible(MethodCmd a, MethodCmd b)
