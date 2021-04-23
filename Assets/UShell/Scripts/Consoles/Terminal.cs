@@ -379,8 +379,8 @@ namespace UShell.Consoles
 
         private void getTabComplete()
         {
-            Event outEvent = new Event();
-            Event.PopEvent(outEvent);
+            UnityEngine.Event outEvent = new UnityEngine.Event();
+            UnityEngine.Event.PopEvent(outEvent);
 
             string tab = Shell.Main.GetCompletion(_input.text, out List<string> options);
             _input.SetTextWithoutNotify(_input.text + tab);
@@ -399,8 +399,8 @@ namespace UShell.Consoles
         }
         private void getFuzzyCmds()
         {
-            Event outEvent = new Event();
-            Event.PopEvent(outEvent);
+            UnityEngine.Event outEvent = new UnityEngine.Event();
+            UnityEngine.Event.PopEvent(outEvent);
 
             List<string> fuzzyCmds = Shell.Main.GetSimilarCmds(_input.text, 3);
             if (fuzzyCmds.Count > 0)
@@ -417,8 +417,8 @@ namespace UShell.Consoles
         }
         private void getPreviousCommand()
         {
-            Event outEvent = new Event();
-            Event.PopEvent(outEvent);
+            UnityEngine.Event outEvent = new UnityEngine.Event();
+            UnityEngine.Event.PopEvent(outEvent);
 
             _historyPos = Mathf.Clamp(_historyPos, 0, Shell.Main.HistoryCount);
 
@@ -435,8 +435,8 @@ namespace UShell.Consoles
         }
         private void getNextCommand()
         {
-            Event outEvent = new Event();
-            Event.PopEvent(outEvent);
+            UnityEngine.Event outEvent = new UnityEngine.Event();
+            UnityEngine.Event.PopEvent(outEvent);
 
             _historyPos = Mathf.Clamp(_historyPos, 0, Shell.Main.HistoryCount);
 

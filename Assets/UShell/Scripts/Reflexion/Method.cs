@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace UShell
 {
-    internal struct MethodCmd
+    internal struct Method
     {
         #region FIELDS
         private MethodInfo _method;
@@ -56,7 +56,7 @@ namespace UShell
         #endregion
 
         #region CONSTRUCTORS
-        public MethodCmd(MethodInfo methodInfo)
+        public Method(MethodInfo methodInfo)
         {
             _method = methodInfo;
             _parameters = _method.GetParameters();
@@ -111,7 +111,7 @@ namespace UShell
             return result;
         }
 
-        public static bool AreCompatible(MethodCmd a, MethodCmd b)
+        public static bool AreCompatible(Method a, Method b)
         {
             if (a.paramCountMin < b.paramCountMin && a.paramCountMax < b.paramCountMin)
                 return true;

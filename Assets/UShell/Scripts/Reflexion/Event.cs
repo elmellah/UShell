@@ -6,7 +6,7 @@ using System.Text;
 
 namespace UShell
 {
-    internal struct EventCmd
+    internal struct Event
     {
         #region FIELDS
         private EventInfo _event;
@@ -60,7 +60,7 @@ namespace UShell
         #endregion
 
         #region CONSTRUCTORS
-        public EventCmd(EventInfo eventInfo)
+        public Event(EventInfo eventInfo)
         {
             _event = eventInfo;
             _invoke = eventInfo.EventHandlerType.GetMethod("Invoke");

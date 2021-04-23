@@ -114,9 +114,9 @@ namespace UShell
         private Dictionary<string, ICommand> _cmds = new Dictionary<string, ICommand>();
         private Dictionary<string, ICommand> _builtinCmds = new Dictionary<string, ICommand>();
         private Dictionary<string, string> _aliases = new Dictionary<string, string>();
-        private Dictionary<string, ConvarCmd> _convars = new Dictionary<string, ConvarCmd>();
-        private Dictionary<string, List<MethodCmd>> _methods = new Dictionary<string, List<MethodCmd>>();
-        private Dictionary<string, EventCmd> _events = new Dictionary<string, EventCmd>();
+        private Dictionary<string, Convar> _convars = new Dictionary<string, Convar>();
+        private Dictionary<string, List<Method>> _methods = new Dictionary<string, List<Method>>();
+        private Dictionary<string, Event> _events = new Dictionary<string, Event>();
         private Dictionary<Type, List<object>> _instances = new Dictionary<Type, List<object>>();
         private Dictionary<string, string> _variables = new Dictionary<string, string>();
 
@@ -490,60 +490,60 @@ namespace UShell
                 FieldInfo[] fieldInfos = types[i].GetFields(_bindingFlags);
                 for (int j = 0; j < fieldInfos.Length; j++)
                     if (Attribute.IsDefined(fieldInfos[j], typeof(ConvarAttribute), false))
-                        registerConvar(new ConvarCmd(fieldInfos[j]));
+                        registerConvar(new Convar(fieldInfos[j]));
 
                 PropertyInfo[] propertyInfos = types[i].GetProperties(_bindingFlags);
                 for (int j = 0; j < propertyInfos.Length; j++)
                     if (Attribute.IsDefined(propertyInfos[j], typeof(ConvarAttribute), false))
-                        registerConvar(new ConvarCmd(propertyInfos[j]));
+                        registerConvar(new Convar(propertyInfos[j]));
 
                 MethodInfo[] methodInfos = types[i].GetMethods(_bindingFlags);
                 for (int j = 0; j < methodInfos.Length; j++)
                     if (Attribute.IsDefined(methodInfos[j], typeof(CmdAttribute), false))
-                        registerMethod(new MethodCmd(methodInfos[j]));
+                        registerMethod(new Method(methodInfos[j]));
 
                 EventInfo[] eventInfos = types[i].GetEvents(_bindingFlags);
                 for (int j = 0; j < eventInfos.Length; j++)
                     if (Attribute.IsDefined(eventInfos[j], typeof(EventAttribute), false))
-                        registerEvent(new EventCmd(eventInfos[j]));
+                        registerEvent(new Event(eventInfos[j]));
             }
         }
-        private void registerConvar(ConvarCmd convarCmd)
+        private void registerConvar(Convar convar)
         {
-            string label = convarCmd.Name;
+            string label = convar.Name;
             if (!_convars.ContainsKey(label))
-                _convars.Add(label, convarCmd);
+                _convars.Add(label, convar);
             else
             {
-                label = convarCmd.DeclaringType + "." + convarCmd.Name;
+                label = convar.DeclaringType + "." + convar.Name;
                 if (!_convars.ContainsKey(label))
-                    _convars.Add(label, convarCmd);
+                    _convars.Add(label, convar);
             }
         }
-        private void registerMethod(MethodCmd methodCmd)
+        private void registerMethod(Method method)
         {
-            string label = methodCmd.Name;
+            string label = method.Name;
             if (!_methods.ContainsKey(label))
-                _methods.Add(label, new List<MethodCmd>() { methodCmd });
+                _methods.Add(label, new List<Method>() { method });
             else
             {
                 for (int i = 0; i < _methods[label].Count; i++)
-                    if (methodCmd.DeclaringType != _methods[label][i].DeclaringType || !MethodCmd.AreCompatible(methodCmd, _methods[label][i]))
+                    if (method.DeclaringType != _methods[label][i].DeclaringType || !Method.AreCompatible(method, _methods[label][i]))
                         return;
 
-                _methods[label].Add(methodCmd);
+                _methods[label].Add(method);
             }
         }
-        private void registerEvent(EventCmd eventCmd)
+        private void registerEvent(Event @event)
         {
-            string label = eventCmd.Name;
+            string label = @event.Name;
             if (!_events.ContainsKey(label))
-                _events.Add(label, eventCmd);
+                _events.Add(label, @event);
             else
             {
-                label = eventCmd.DeclaringType + "." + eventCmd.Name;
+                label = @event.DeclaringType + "." + @event.Name;
                 if (!_events.ContainsKey(label))
-                    _events.Add(label, eventCmd);
+                    _events.Add(label, @event);
             }
         }
         #endregion
@@ -640,10 +640,10 @@ namespace UShell
                 processEvent(source, label, fields);
             else if (_builtinCmds.TryGetValue(label, out ICommand cmd) || _cmds.TryGetValue(label, out cmd))
                 processICmd(source, cmd, label, fields);
-            else if (_convars.TryGetValue(label, out ConvarCmd convarCmd))
-                processConvar(source, convarCmd, label, fields);
-            else if (_methods.TryGetValue(label, out List<MethodCmd> methodCmds))
-                processMethod(source, methodCmds, label, fields);
+            else if (_convars.TryGetValue(label, out Convar convar))
+                processConvar(source, convar, label, fields);
+            else if (_methods.TryGetValue(label, out List<Method> method))
+                processMethod(source, method, label, fields);
             else
             {
                 StringBuilder log = new StringBuilder(string.Format(unknownMessage, label));
@@ -735,7 +735,7 @@ namespace UShell
                 Debug.LogError(string.Format(exceptionMessage, label, e.Message));
             }
         }
-        private void processConvar(string source, ConvarCmd convarCmd, string label, string[] fields)
+        private void processConvar(string source, Convar convar, string label, string[] fields)
         {
             const string noInstances = "shell: {0}: no instances registered for {1}";
             const string cannotRead = "shell: {0}: no permission to read";
@@ -744,26 +744,26 @@ namespace UShell
             const string exception = "shell: {0}: {1}";
 
             List<object> instances;
-            if (convarCmd.IsStatic)
+            if (convar.IsStatic)
             {
                 instances = new List<object>();
                 instances.Add(null);
             }
-            else if (!_instances.TryGetValue(convarCmd.DeclaringType, out instances))
+            else if (!_instances.TryGetValue(convar.DeclaringType, out instances))
             {
-                Debug.LogWarning(string.Format(noInstances, label, convarCmd.DeclaringType));
+                Debug.LogWarning(string.Format(noInstances, label, convar.DeclaringType));
                 return;
             }
 
             if (fields.Length == 0) //READING VALUE
             {
-                if (convarCmd.CanRead)
+                if (convar.CanRead)
                 {
                     StringBuilder log = new StringBuilder();
                     try
                     {
                         for (int i = 0; i < instances.Count; i++)
-                            log.Append(Utils.ConvertToString(convarCmd.GetValue(instances[i])));
+                            log.Append(Utils.ConvertToString(convar.GetValue(instances[i])));
                     }
                     catch (Exception e)
                     {
@@ -777,22 +777,22 @@ namespace UShell
             }
             else if (fields.Length == 1) //MODIFY VALUE
             {
-                if (convarCmd.CanWrite)
+                if (convar.CanWrite)
                 {
                     try
                     {
-                        if (convarCmd.Type.IsArray)
+                        if (convar.Type.IsArray)
                         {
-                            Type T = convarCmd.Type.GetElementType();
+                            Type T = convar.Type.GetElementType();
                             Utils.TryParseArray(fields[0], out object result, T);
                             for (int i = 0; i < instances.Count; i++)
-                                convarCmd.SetValue(instances[i], result);
+                                convar.SetValue(instances[i], result);
                         }
                         else
                         {
-                            object value = Utils.ConvertFromString(fields[0], convarCmd.Type);
+                            object value = Utils.ConvertFromString(fields[0], convar.Type);
                             for (int i = 0; i < instances.Count; i++)
-                                convarCmd.SetValue(instances[i], value);
+                                convar.SetValue(instances[i], value);
                         }
                     }
                     catch (Exception e)
@@ -806,30 +806,30 @@ namespace UShell
             else
                 Debug.LogWarning(string.Format(tooManyArgs, label));
         }
-        private async void processMethod(string source, List<MethodCmd> methodCmds, string label, string[] fields)
+        private async void processMethod(string source, List<Method> methods, string label, string[] fields)
         {
             const string noInstances = "shell: {0}: no instances registered for {1}";
             const string wrongSyntax = "shell: {0}: wrongSyntax";
             const string exception = "shell: {0}: {1}";
 
-            for (int i = 0; i < methodCmds.Count; i++)
+            for (int i = 0; i < methods.Count; i++)
             {
-                if (!methodCmds[i].CanInvoke(fields.Length))
+                if (!methods[i].CanInvoke(fields.Length))
                     continue;
 
                 List<object> instances;
-                if (methodCmds[i].IsStatic)
+                if (methods[i].IsStatic)
                 {
                     instances = new List<object>();
                     instances.Add(null);
                 }
-                else if (!_instances.TryGetValue(methodCmds[i].DeclaringType, out instances))
+                else if (!_instances.TryGetValue(methods[i].DeclaringType, out instances))
                 {
-                    Debug.LogWarning(string.Format(noInstances, label, methodCmds[i].DeclaringType));
+                    Debug.LogWarning(string.Format(noInstances, label, methods[i].DeclaringType));
                     return;
                 }
 
-                ParameterInfo[] parameters = methodCmds[i].Parameters;
+                ParameterInfo[] parameters = methods[i].Parameters;
                 object[] args = new object[fields.Length];
                 for (int j = 0; j < args.Length; j++)
                 {
@@ -858,7 +858,7 @@ namespace UShell
                 {
                     object returnValue = null;
                     for (int j = 0; j < instances.Count; j++)
-                        returnValue = await methodCmds[i].Invoke(instances[j], args);
+                        returnValue = await methods[i].Invoke(instances[j], args);
 
                     for (int j = 0; j < args.Length; j++)
                     {
@@ -880,7 +880,7 @@ namespace UShell
 
             StringBuilder strBuilder = new StringBuilder();
             strBuilder.AppendLine(string.Format(wrongSyntax, label));
-            foreach (var method in methodCmds)
+            foreach (var method in methods)
                 strBuilder.AppendLine(method.ToString());
             Debug.LogWarning(strBuilder);
         }
@@ -1379,7 +1379,7 @@ namespace UShell
                 }
                 else if (_methods.TryGetValue(args[0], out var methods))
                 {
-                    foreach (MethodCmd method in methods)
+                    foreach (Method method in methods)
                         strBuilder.AppendLine(method.ToString());
                 }
                 else
@@ -1574,18 +1574,18 @@ namespace UShell
             }
             else if (args.Length == 2)
             {
-                EventCmd eventCmd;
+                Event @event;
                 switch (args[0])
                 {
                     case "-r":
-                        if (_events.TryGetValue(args[1], out eventCmd))
-                            eventCmd.RemoveAllEventHandlers();
+                        if (_events.TryGetValue(args[1], out @event))
+                            @event.RemoveAllEventHandlers();
                         else
                             Debug.LogWarning(args[1] + ": unknown event");
                         break;
                     default:
-                        if (_events.TryGetValue(args[0], out eventCmd))
-                            eventCmd.AddEventHandler(args[1], _eventsAssemblyBuilder, _instances);
+                        if (_events.TryGetValue(args[0], out @event))
+                            @event.AddEventHandler(args[1], _eventsAssemblyBuilder, _instances);
                         else
                             Debug.LogWarning(args[0] + ": unknown event");
                         break;

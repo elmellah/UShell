@@ -4,7 +4,7 @@ using System.Text;
 
 namespace UShell
 {
-    internal struct ConvarCmd
+    internal struct Convar
     {
         #region FIELDS
         private FieldInfo _fieldInfo;
@@ -132,12 +132,12 @@ namespace UShell
         #endregion
 
         #region CONSTRUCTORS
-        public ConvarCmd(FieldInfo fieldInfo)
+        public Convar(FieldInfo fieldInfo)
         {
             _fieldInfo = fieldInfo;
             _propertyInfo = null;
         }
-        public ConvarCmd(PropertyInfo propertyInfo)
+        public Convar(PropertyInfo propertyInfo)
         {
             _fieldInfo = null;
             _propertyInfo = propertyInfo;
