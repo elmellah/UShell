@@ -880,7 +880,8 @@ namespace UShell
 
             StringBuilder strBuilder = new StringBuilder();
             strBuilder.AppendLine(string.Format(wrongSyntax, label));
-            getHelpFromLabel(strBuilder, methodCmds, label);
+            foreach (var method in methodCmds)
+                strBuilder.AppendLine(method.ToString());
             Debug.LogWarning(strBuilder);
         }
         #endregion
@@ -1371,37 +1372,53 @@ namespace UShell
         private void executeHelp(string[] args)
         {
             StringBuilder strBuilder = new StringBuilder();
-            ICommand cmd;
-            List<MethodCmd> methods;
 
             if (args.Length == 0)
             {
                 strBuilder.Append("commands: " + (_builtinCmds.Count + _cmds.Count));
-                getHelp(strBuilder, _builtinCmds, true);
-                getHelp(strBuilder, _cmds, false);
-                getHelp(strBuilder, _methods);
+                foreach (var c in _builtinCmds.Keys)
+                {
+                    strBuilder.Append("\n\t");
+                    strBuilder.Append("+ ");
+                    strBuilder.Append(c);
+                }
+                foreach (var c in _cmds.Keys)
+                {
+                    strBuilder.Append("\n\t");
+                    strBuilder.Append("- ");
+                    strBuilder.Append(c);
+                }
+                foreach (var m in _methods.Keys)
+                {
+                    strBuilder.Append("\n\t- ");
+                    strBuilder.Append(m);
+                }
 
                 Debug.Log(strBuilder.ToString());
             }
             else if (args.Length == 1)
             {
+                ICommand cmd;
                 if (_builtinCmds.TryGetValue(args[0], out cmd))
                 {
-                    getHelpFromLabel(strBuilder, cmd, args[0]);
-                    Debug.Log(strBuilder);
+                    getHelp(strBuilder, cmd, args[0]);
                 }
                 else if (_cmds.TryGetValue(args[0], out cmd))
                 {
-                    getHelpFromLabel(strBuilder, cmd, args[0]);
-                    Debug.Log(strBuilder);
+                    getHelp(strBuilder, cmd, args[0]);
                 }
-                else if (_methods.TryGetValue(args[0], out methods))
+                else if (_methods.TryGetValue(args[0], out var methods))
                 {
-                    getHelpFromLabel(strBuilder, methods, args[0]);
-                    Debug.Log(strBuilder);
+                    foreach (MethodCmd method in methods)
+                        strBuilder.AppendLine(method.ToString());
                 }
                 else
+                {
                     Debug.LogWarning(args[0] + ": unknown command");
+                    return;
+                }
+
+                Debug.Log(strBuilder);
             }
             else
                 throw new ArgumentException();
@@ -1569,67 +1586,25 @@ namespace UShell
         {
             StringBuilder log = new StringBuilder();
             log.Append("convars: " + _convars.Count);
-
-            foreach (KeyValuePair<string, ConvarCmd> convar in _convars)
-            {
-                string convarType = convar.Value.IsStatic ? "-" : "+";
-                log.Append("\n\t").Append(convarType).Append(" ").Append(convar.Key);
-
-                if (convar.Value.CanWrite)
-                    log.Append(string.Format(" [{0}]", convar.Value.Type.Name));
-
-                if (!convar.Value.IsStatic)
-                {
-                    int instanceCount = 0;
-                    Type declaringType = convar.Value.DeclaringType;
-
-                    if (_instances.ContainsKey(declaringType))
-                        instanceCount = _instances[declaringType].Count;
-                        
-                    log.Append(string.Format(" ({0})", instanceCount));
-                }
-
-                string info = convar.Value.Info;
-                if (!string.IsNullOrEmpty(info))
-                    log.Append(": ").Append(info);
-            }
+            foreach (var convar in _convars.Values)
+                log.Append("\n\t").Append(convar.IsStatic ? "- " : "+ ").Append(convar.ToString());
 
             Debug.Log(log.ToString());
         }
         private void executeEvent(string[] args)
         {
-            EventCmd eventCmd;
-
             if (args.Length == 0)
             {
                 StringBuilder log = new StringBuilder();
                 log.Append("events: " + _events.Count);
-
-                foreach (var @event in _events)
-                {
-                    string convarType = @event.Value.IsStatic ? "-" : "+";
-                    log.Append("\n\t").Append(convarType).Append(" ").Append(@event.Key);
-
-                    if (!@event.Value.IsStatic)
-                    {
-                        int instanceCount = 0;
-                        Type declaringType = @event.Value.DeclaringType;
-
-                        if (_instances.ContainsKey(declaringType))
-                            instanceCount = _instances[declaringType].Count;
-
-                        log.Append(string.Format(" ({0})", instanceCount));
-                    }
-
-                    string info = @event.Value.Info;
-                    if (!string.IsNullOrEmpty(info))
-                        log.Append(": ").Append(info);
-                }
+                foreach (var @event in _events.Values)
+                    log.Append("\n\t").Append(@event.IsStatic ? "- " : "+ ").Append(@event.ToString());
 
                 Debug.Log(log.ToString());
             }
             else if (args.Length == 2)
             {
+                EventCmd eventCmd;
                 switch (args[0])
                 {
                     case "-r":
@@ -1681,33 +1656,7 @@ namespace UShell
                 throw new ArgumentException();
         }
 
-        private void getHelp(StringBuilder strBuilder, Dictionary<string, ICommand> cmds, bool isBuiltin)
-        {
-            foreach (KeyValuePair<string, ICommand> cmd in cmds)
-            {
-                strBuilder.Append("\n\t");
-
-                if (isBuiltin)
-                    strBuilder.Append("+ ");
-                else
-                    strBuilder.Append("- ");
-
-                strBuilder.Append(cmd.Key);
-
-                string[] syntaxes = cmd.Value.GetSyntaxes(cmd.Key);
-                if (syntaxes != null && syntaxes.Length > 0 && !string.IsNullOrEmpty(syntaxes[0]))
-                    strBuilder.Append(" ").Append(syntaxes[0]);
-            }
-        }
-        private void getHelp(StringBuilder strBuilder, Dictionary<string, List<MethodCmd>> methods)
-        {
-            foreach (KeyValuePair<string, List<MethodCmd>> methodList in methods)
-            {
-                strBuilder.Append("\n\t- ");
-                strBuilder.Append(methodList.Key);
-            }
-        }
-        private void getHelpFromLabel(StringBuilder strBuilder, ICommand cmd, string label)
+        private void getHelp(StringBuilder strBuilder, ICommand cmd, string label)
         {
             string[] syntaxes = cmd.GetSyntaxes(label);
             string[] infos = cmd.GetInfos(label);
@@ -1716,53 +1665,33 @@ namespace UShell
             {
                 for (int i = 0; i < syntaxes.Length; i++)
                 {
+                    strBuilder.Append(label);
+                    strBuilder.Append(" ");
+                    strBuilder.Append(syntaxes[i]);
                     if (i >= infos.Length)
-                        strBuilder.Append(label + " " + syntaxes[i] + "\n");
+                    {
+                        strBuilder.AppendLine();
+                    }
                     else
-                        strBuilder.Append(label + " " + syntaxes[i] + ": " + infos[i] + "\n");
+                    {
+                        strBuilder.Append(": ");
+                        strBuilder.AppendLine(infos[i]);
+                    }
                 }
             }
             else
             {
                 for (int i = 0; i < infos.Length; i++)
                 {
-                    if (i >= syntaxes.Length)
-                        strBuilder.Append(label + ": " + infos[i] + "\n");
-                    else
-                        strBuilder.Append(label + " " + syntaxes[i] + ": " + infos[i] + "\n");
+                    strBuilder.Append(label);
+                    if (i < syntaxes.Length)
+                    {
+                        strBuilder.Append(" ");
+                        strBuilder.Append(syntaxes[i]);
+                    }
+                    strBuilder.Append(": ");
+                    strBuilder.AppendLine(infos[i]);
                 }
-            }
-        }
-        private void getHelpFromLabel(StringBuilder strBuilder, List<MethodCmd> methods, string label)
-        {
-            foreach (MethodCmd method in methods)
-            {
-                strBuilder.Append(label);
-
-                ParameterInfo[] parameterInfos = method.Parameters;
-                for (int i = 0; i < parameterInfos.Length; i++)
-                {
-                    strBuilder.Append(" ");
-                    if (parameterInfos[i].IsOut)
-                        strBuilder.Append("[out]");
-                    else if (parameterInfos[i].ParameterType.IsByRef && !parameterInfos[i].IsIn)
-                        strBuilder.Append("[ref]");
-
-                    strBuilder.Append(parameterInfos[i].Name + ":");
-                    if (parameterInfos[i].ParameterType.IsByRef)
-                        strBuilder.Append(parameterInfos[i].ParameterType.GetElementType().Name);
-                    else
-                        strBuilder.Append(parameterInfos[i].ParameterType.Name);
-
-                    if (parameterInfos[i].HasDefaultValue)
-                        strBuilder.Append("=" + (parameterInfos[i].DefaultValue ?? "null"));
-                }
-
-                string info = method.Info;
-                if (!string.IsNullOrEmpty(info))
-                    strBuilder.Append(": " + info);
-
-                strBuilder.Append("\n");
             }
         }
         #endregion
