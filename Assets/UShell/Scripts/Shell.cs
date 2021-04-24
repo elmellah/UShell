@@ -757,25 +757,26 @@ namespace UShell
                 else
                     Debug.LogWarning(string.Format(cannotRead, label));
             }
-            else if (fields.Length == 1) //MODIFY VALUE
+            else if (fields.Length >= 1) //MODIFY VALUE
             {
                 if (convar.CanWrite)
                 {
+                    if (!convar.Type.IsArray && fields.Length > 1)
+                    {
+                        Debug.LogWarning(string.Format(tooManyArgs, label));
+                        return;
+                    }
+
                     try
                     {
+                        object value;
                         if (convar.Type.IsArray)
-                        {
-                            Type T = convar.Type.GetElementType();
-                            Utils.TryParseArray(fields[0], out object result, T);
-                            for (int i = 0; i < instances.Count; i++)
-                                convar.SetValue(instances[i], result);
-                        }
+                            value = Utils.ConvertFromString(fields, convar.Type.GetElementType());
                         else
-                        {
-                            object value = Utils.ConvertFromString(fields[0], convar.Type);
-                            for (int i = 0; i < instances.Count; i++)
-                                convar.SetValue(instances[i], value);
-                        }
+                            value = Utils.ConvertFromString(fields[0], convar.Type);
+
+                        for (int i = 0; i < instances.Count; i++)
+                            convar.SetValue(instances[i], value);
                     }
                     catch (Exception e)
                     {

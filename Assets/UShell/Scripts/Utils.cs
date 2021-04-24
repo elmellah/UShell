@@ -179,8 +179,8 @@ namespace UShell
 
         public static object ConvertFromString(string input, Type T)
         {
-            MethodInfo method = typeof(Utils).GetMethod(nameof(Utils.ConvertFromStringGeneric)).MakeGenericMethod(T);
-            return method.Invoke(null, new [] { input });
+            MethodInfo method = typeof(Utils).GetMethod(nameof(Utils.ConvertFromStringGeneric), new[] { typeof(string) }).MakeGenericMethod(T);
+            return method.Invoke(null, new[] { input });
         }
         public static T ConvertFromStringGeneric<T>(string input)
         {
@@ -223,6 +223,19 @@ namespace UShell
 
                 throw new InvalidOperationException(cannotConvert + typeof(T));
             }
+        }
+        public static object ConvertFromString(string[] input, Type T)
+        {
+            MethodInfo method = typeof(Utils).GetMethod(nameof(Utils.ConvertFromStringGeneric), new[] { typeof(string[]) }).MakeGenericMethod(T);
+            return method.Invoke(null, new[] { input });
+        }
+        public static T[] ConvertFromStringGeneric<T>(string[] input)
+        {
+            T[] result = new T[input.Length];
+            for (int i = 0; i < input.Length; i++)
+                result[i] = ConvertFromStringGeneric<T>(input[i]);
+
+            return result;
         }
 
         public static bool TryParseVector2(string s, NumberStyles style, IFormatProvider provider, out Vector2 result)
