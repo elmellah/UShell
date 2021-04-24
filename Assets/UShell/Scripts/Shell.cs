@@ -1120,6 +1120,14 @@ namespace UShell
                     };
                 case "args":
                     return new string[] { "[arg ...]" };
+                case "convar":
+                    return new string[]
+                    {
+                        "[-e convar ...] [-n convar ...]",
+                        "",
+                        "-e convar ...",
+                        "-n convar ...",
+                    };
                 case "event":
                     return new string[]
                     {
@@ -1184,7 +1192,13 @@ namespace UShell
                 case "args":
                     return new string[] { "for debugging purpose" };
                 case "convar":
-                    return new string[] { "log all console variables" };
+                    return new string[]
+                    {
+                        "handle convars",
+                        "log all convars",
+                        "empty convars (if arrays)",
+                        "set convars to null",
+                    };
                 case "event":
                     return new string[]
                     {
@@ -1543,12 +1557,57 @@ namespace UShell
         }
         private void executeConvar(string[] args)
         {
-            StringBuilder log = new StringBuilder();
-            log.Append("convars: " + _convars.Count);
-            foreach (var convar in _convars.Values)
-                log.Append("\n\t").Append(convar.IsStatic ? "- " : "+ ").Append(convar.ToString());
+            if (args.Length == 0)
+            {
+                StringBuilder log = new StringBuilder();
+                log.Append("convars: " + _convars.Count);
+                foreach (var convar in _convars.Values)
+                    log.Append("\n\t").Append(convar.IsStatic ? "- " : "+ ").Append(convar.ToString());
 
-            Debug.Log(log.ToString());
+                Debug.Log(log.ToString());
+            }
+            else if (args.Length > 1)
+            {
+                Convar convar;
+                if (args[0] == "-e") // EMPTY IF ARRAY
+                {
+                    for (int i = 1; i < args.Length; i++)
+                    {
+                        if (_convars.TryGetValue(args[i], out convar) && convar.Type.IsArray)
+                        {
+                            List<object> instances;
+                            if (convar.IsStatic)
+                                instances = new List<object>(new object[] { null });
+                            else if (!_instances.TryGetValue(convar.DeclaringType, out instances))
+                                continue;
+
+                            foreach (var obj in instances)
+                                convar.SetValue(obj, Array.CreateInstance(convar.Type.GetElementType(), 0));
+                        }
+                    }
+                }
+                else if (args[0] == "-n") // SET TO NULL
+                {
+                    for (int i = 1; i < args.Length; i++)
+                    {
+                        if (_convars.TryGetValue(args[i], out convar))
+                        {
+                            List<object> instances;
+                            if (convar.IsStatic)
+                                instances = new List<object>(new object[] { null });
+                            else if (!_instances.TryGetValue(convar.DeclaringType, out instances))
+                                continue;
+
+                            foreach (var obj in instances)
+                                convar.SetValue(obj, null);
+                        }
+                    }
+                }
+                else
+                    throw new ArgumentException();
+            }
+            else
+                throw new ArgumentException();
         }
         private void executeEvent(string[] args)
         {
