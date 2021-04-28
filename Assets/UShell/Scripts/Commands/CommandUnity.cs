@@ -382,7 +382,7 @@ namespace UShell.Commands
                 _isPinging = true;
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
 #endif
         }
         private void executeQuit(string[] args)
@@ -397,7 +397,7 @@ namespace UShell.Commands
                 Application.Quit(exitCode);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeLDS(string[] args)
         {
@@ -418,7 +418,7 @@ namespace UShell.Commands
                 SceneManager.LoadScene(sceneName);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeScreenshot(string[] args)
         {
@@ -449,7 +449,7 @@ namespace UShell.Commands
                 Debug.Log(Application.dataPath + "/" + args[0]);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeDebug(string[] args)
         {
@@ -498,7 +498,7 @@ namespace UShell.Commands
                             _hideDevConsole = hideDevConsole;
                         }
                         else
-                            throw new ArgumentException();
+                            throw new SyntaxException();
                         break;
                     case "-L":
                         if (args.Length == 3)
@@ -513,7 +513,7 @@ namespace UShell.Commands
                                 Debug.LogError("cannot parse \'" + args[1] + "\' to Vector3");
                         }
                         else
-                            throw new ArgumentException();
+                            throw new SyntaxException();
                         break;
                     case "-R":
                         if (args.Length == 3)
@@ -528,7 +528,7 @@ namespace UShell.Commands
                                 Debug.LogError("cannot parse \'" + args[1] + "\' to Vector3");
                         }
                         else
-                            throw new ArgumentException();
+                            throw new SyntaxException();
                         break;
                     case "-G":
                         int size = 64;
@@ -560,7 +560,7 @@ namespace UShell.Commands
                 AudioListener.volume = volume;
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeBeep(string[] args)
         {
@@ -595,7 +595,7 @@ namespace UShell.Commands
                 _beepSource.Play();
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executePPREF(string[] args)
         {
@@ -606,7 +606,7 @@ namespace UShell.Commands
                 else if (args[0] == "-S")
                     PlayerPrefs.Save();
                 else
-                    throw new ArgumentException();
+                    throw new SyntaxException();
             }
             else if (args.Length == 2)
             {
@@ -628,7 +628,7 @@ namespace UShell.Commands
                         Debug.Log(PlayerPrefs.GetString(args[1]));
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else if (args.Length == 3)
@@ -651,11 +651,11 @@ namespace UShell.Commands
                         }
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeFPS(string[] args)
         {
@@ -669,7 +669,7 @@ namespace UShell.Commands
                 Application.targetFrameRate = target;
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeScreen(string[] args)
         {
@@ -724,11 +724,11 @@ namespace UShell.Commands
                         Application.RequestUserAuthorization(UserAuthorization.WebCam);
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeTime(string[] args)
         {
@@ -760,7 +760,7 @@ namespace UShell.Commands
                         Debug.Log(Time.maximumParticleDeltaTime);
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else if (args.Length == 2)
@@ -784,11 +784,11 @@ namespace UShell.Commands
                         Time.maximumParticleDeltaTime = maximumParticleDeltaTime;
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeMic(string[] args)
         {
@@ -836,11 +836,11 @@ namespace UShell.Commands
                         Cursor.lockState = CursorLockMode.None;
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeWebcam(string[] args)
         {
@@ -875,7 +875,7 @@ namespace UShell.Commands
                         Debug.Log(_planRestart);
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else if (args.Length == 2)
@@ -889,11 +889,11 @@ namespace UShell.Commands
                         _planRestart = Utils.BoolParse(args[1]);
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
 
         private static void restartProcess()

@@ -1,8 +1,7 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Text;
-using System;
+using UnityEngine;
 
 namespace UShell.Commands
 {
@@ -54,8 +53,10 @@ namespace UShell.Commands
         void Update()
         {
             for (int i = 0; i < _keyCodes.Count; i++)
+            {
                 if (Input.GetKeyDown(_keyCodes[i]))
                     Shell.Main.ProcessCmdLine("B", _commands[i]);
+            }
         }
         #endregion
 
@@ -122,7 +123,7 @@ namespace UShell.Commands
                 _commands.Add(args[1]);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeUnbind(string[] args)
         {
@@ -139,11 +140,11 @@ namespace UShell.Commands
                     Debug.LogWarning("no entry for " + args[0]);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeKeycode(string[] args)
         {
-            System.Array keyCodes = System.Enum.GetValues(typeof(KeyCode));
+            Array keyCodes = Enum.GetValues(typeof(KeyCode));
             StringBuilder strBuilder = new StringBuilder();
 
             for (int i = 0; i < keyCodes.Length; i++)

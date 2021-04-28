@@ -697,7 +697,7 @@ namespace UShell
             {
                 cmd.Execute(label, fields);
             }
-            catch (ArgumentException)
+            catch (SyntaxException)
             {
                 string log = string.Format(wrongSyntaxMessage, label);
                 string[] syntaxes = cmd.GetSyntaxes(label);
@@ -1278,7 +1278,7 @@ namespace UShell
                     Debug.LogWarning("the page does not exist");
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeEcho(string[] args)
         {
@@ -1302,7 +1302,7 @@ namespace UShell
                     _aliases.Add(args[0], args[1]);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeUnalias(string[] args)
         {
@@ -1314,7 +1314,7 @@ namespace UShell
                     Debug.LogWarning("no entry for " + args[0]);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeHistory(string[] args)
         {
@@ -1336,11 +1336,11 @@ namespace UShell
                         _history.Clear();
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeHelp(string[] args)
         {
@@ -1394,7 +1394,7 @@ namespace UShell
                 Debug.Log(strBuilder);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeVersion(string[] args)
         {
@@ -1434,7 +1434,7 @@ namespace UShell
                 Debug.Log(log);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeSource(string[] args)
         {
@@ -1458,7 +1458,7 @@ namespace UShell
                     Debug.LogWarning("the file does not exist");
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeFont(string[] args)
         {
@@ -1513,7 +1513,7 @@ namespace UShell
                         deleteAllFonts();
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else if (args.Length == 2)
@@ -1541,11 +1541,11 @@ namespace UShell
                         }
                         break;
                     default:
-                        throw new ArgumentException();
+                        throw new SyntaxException();
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeArgs(string[] args)
         {
@@ -1604,10 +1604,10 @@ namespace UShell
                     }
                 }
                 else
-                    throw new ArgumentException();
+                    throw new SyntaxException();
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeEvent(string[] args)
         {
@@ -1640,7 +1640,7 @@ namespace UShell
                 }
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
         private void executeReflex(string[] args)
         {
@@ -1671,7 +1671,7 @@ namespace UShell
                 Debug.Log(strBuilder);
             }
             else
-                throw new ArgumentException();
+                throw new SyntaxException();
         }
 
         private void getHelp(StringBuilder strBuilder, ICommand cmd, string label)
