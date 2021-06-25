@@ -148,6 +148,24 @@ namespace UShell
             return Regex.Replace(text, "<.*?>", String.Empty);
         }
 
+        public static string Convert2DArrayToString(string[][] array, bool drawBorder = true, int margin = 0)
+        {
+            int[] sizes = new int[array[0].Length];
+
+            for (int i = 0; i < array.Length; i++)
+                for (int j = 0; j < sizes.Length; j++)
+                    sizes[j] = array[i][j].Length > sizes[j] ? array[i][j].Length : sizes[j];
+
+            string format = "";
+            for (int i = 0; i < sizes.Length; i++)
+                format += "{" + i + ", " + sizes[i] + "}" + (drawBorder ? "|" : "") + new string(' ', margin);
+
+            string result = "";
+            for (int i = 0; i < array.Length; i++)
+                result += string.Format(format, array[i]) + "\n";
+
+            return result;
+        }
         public static string ConvertToString(object obj)
         {
             StringBuilder stringBuilder = new StringBuilder();
