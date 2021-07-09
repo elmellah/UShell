@@ -338,8 +338,11 @@ namespace UShell
         /// </summary>
         /// <param name="id"></param>
         /// <param name="command"></param>
-        public void RegisterCmd(string id, ICommand command)
+        public void RegisterCmd(string id, ICommand command, bool devOnly = true)
         {
+            if (!Application.isEditor && devOnly && !Debug.isDebugBuild)
+                return;
+
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
             if (command == null)

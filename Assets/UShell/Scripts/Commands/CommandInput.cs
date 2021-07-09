@@ -33,9 +33,9 @@ namespace UShell.Commands
                 this.transform.SetParent(null);
             DontDestroyOnLoad(this.gameObject);
 
-            Shell.Main.RegisterCmd("keycode", this);
-            Shell.Main.RegisterCmd("bind", this);
-            Shell.Main.RegisterCmd("unbind", this);
+            Shell.Main.RegisterCmd("keycode", this, false);
+            Shell.Main.RegisterCmd("bind", this, false);
+            Shell.Main.RegisterCmd("unbind", this, false);
 
             _keyCodes = new List<KeyCode>();
             _commands = new List<string>();

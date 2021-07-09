@@ -50,24 +50,24 @@ namespace UShell.Commands
                 this.transform.SetParent(null);
             DontDestroyOnLoad(this.gameObject);
 
-            Shell.Main.RegisterCmd("quit", this);
-            Shell.Main.RegisterCmd("debug", this); //OP Only
-            Shell.Main.RegisterCmd("path", this);
-            Shell.Main.RegisterCmd("ppref", this); //OP Only
-            Shell.Main.RegisterCmd("beep", this);
-            Shell.Main.RegisterCmd("volume", this);
-            Shell.Main.RegisterCmd("lds", this); //OP Only
-            Shell.Main.RegisterCmd("fps", this);
-            Shell.Main.RegisterCmd("screen", this);
-            Shell.Main.RegisterCmd("ping", this);
-            Shell.Main.RegisterCmd("screenshot", this);
-            Shell.Main.RegisterCmd("auth", this);
-            Shell.Main.RegisterCmd("time", this); //OP Only
-            Shell.Main.RegisterCmd("mic", this);
-            Shell.Main.RegisterCmd("cursor", this); //OP Only
-            Shell.Main.RegisterCmd("webcam", this);
-            Shell.Main.RegisterCmd("tier", this);
-            Shell.Main.RegisterCmd("restart", this);
+            Shell.Main.RegisterCmd("quit",           this, false);
+            Shell.Main.RegisterCmd("debug",          this, false);
+            Shell.Main.RegisterCmd("path",           this, false);
+            Shell.Main.RegisterCmd("ppref",          this, false);
+            Shell.Main.RegisterCmd("beep",           this, false);
+            Shell.Main.RegisterCmd("volume",         this, false);
+            Shell.Main.RegisterCmd("lds",            this, false);
+            Shell.Main.RegisterCmd("fps",            this, false);
+            Shell.Main.RegisterCmd("screen",         this, false);
+            Shell.Main.RegisterCmd("ping",           this, false);
+            Shell.Main.RegisterCmd("screenshot",     this, false);
+            Shell.Main.RegisterCmd("auth",           this, false);
+            Shell.Main.RegisterCmd("time",           this, false);
+            Shell.Main.RegisterCmd("mic",            this, false);
+            Shell.Main.RegisterCmd("cursor",         this, false);
+            Shell.Main.RegisterCmd("webcam",         this, false);
+            Shell.Main.RegisterCmd("tier",           this, false);
+            Shell.Main.RegisterCmd("restart",        this, false);
 
             _lastTime = DateTime.Now;
         }
