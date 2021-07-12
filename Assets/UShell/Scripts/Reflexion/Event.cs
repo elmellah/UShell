@@ -57,6 +57,17 @@ namespace UShell
                 return "";
             }
         }
+        public bool IsDevOnly
+        {
+            get
+            {
+                EventAttribute attribute = _event.GetCustomAttribute<EventAttribute>();
+                if (attribute != null)
+                    return attribute.DevOnly;
+
+                return true;
+            }
+        }
         #endregion
 
         #region CONSTRUCTORS

@@ -57,7 +57,7 @@ namespace UShell
             "event",
             "reflex",
         };
-        [Convar("converters", "the shell converters", true)]
+        [Convar("converters", "the shell converters", true, false)]
         private static Tuple<Type, Type>[] _converters =
         {
             new Tuple<Type, Type>(typeof(Vector2), typeof(Converters.Vector2Converter)),
@@ -82,7 +82,7 @@ namespace UShell
         private string _motd = "type 'README' for more information";
         [SerializeField]
         private int _historySize = 200;
-        [SerializeField] [Convar("fuzzysearch", "does the shell should search for similar commands if an unknown command is read?")]
+        [SerializeField] [Convar("fuzzysearch", "does the shell should search for similar commands if an unknown command is read?", false, false)]
         private bool _logSimilarCmds = true;
         [SerializeField]
         private string[] _defaultAliasKeys;
@@ -122,7 +122,7 @@ namespace UShell
 
         private AssemblyBuilder _eventsAssemblyBuilder;
 
-        [Convar("headless", "is the current process running in batchmode?", true)]
+        [Convar("headless", "is the current process running in batchmode?", true, false)]
         private bool _isHeadless = false;
 
         private Dictionary<string, UFont> _uFonts = new Dictionary<string, UFont>();
@@ -143,23 +143,23 @@ namespace UShell
         /// <summary>
         /// 
         /// </summary>
-        [Convar("version", "the shell version", true)]
+        [Convar("version", "the shell version", true, false)]
         public static string Version { get { return _version; } }
 
         /// <summary>
         /// The identifier for this Shell
         /// </summary>
-        [Convar("shid", "the shell identifier", true)]
+        [Convar("shid", "the shell identifier", true, false)]
         public string ID { get { return _ID; } }
         /// <summary>
         /// The number of entries in the command history
         /// </summary>
-        [Convar("histcount", "the number of entries in the command history", true)]
+        [Convar("histcount", "the number of entries in the command history", true, false)]
         public int HistoryCount { get { return _history.Count; } }
         /// <summary>
         /// The message of the day
         /// </summary>
-        [Convar("motd", "the message of the day", true)]
+        [Convar("motd", "the message of the day", true, false)]
         public string MOTD { get { return _motd; } }
         #endregion
 
@@ -492,6 +492,9 @@ namespace UShell
         }
         private void registerConvar(Convar convar)
         {
+            if (!Application.isEditor && convar.IsDevOnly && !Debug.isDebugBuild)
+                return;
+
             string label = convar.Name;
             if (!_convars.ContainsKey(label))
                 _convars.Add(label, convar);
@@ -504,6 +507,9 @@ namespace UShell
         }
         private void registerMethod(Method method)
         {
+            if (!Application.isEditor && method.IsDevOnly && !Debug.isDebugBuild)
+                return;
+
             string label = method.Name;
             if (!_methods.ContainsKey(label))
                 _methods.Add(label, new List<Method>() { method });
@@ -518,6 +524,9 @@ namespace UShell
         }
         private void registerEvent(Event @event)
         {
+            if (!Application.isEditor && @event.IsDevOnly && !Debug.isDebugBuild)
+                return;
+
             string label = @event.Name;
             if (!_events.ContainsKey(label))
                 _events.Add(label, @event);

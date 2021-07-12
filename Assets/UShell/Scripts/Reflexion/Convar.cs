@@ -129,6 +129,26 @@ namespace UShell
                 return false;
             }
         }
+        public bool IsDevOnly
+        {
+            get
+            {
+                if (IsField)
+                {
+                    ConvarAttribute attribute = _fieldInfo.GetCustomAttribute<ConvarAttribute>();
+                    if (attribute != null)
+                        return attribute.DevOnly;
+                }
+                if (IsProperty)
+                {
+                    ConvarAttribute attribute = _propertyInfo.GetCustomAttribute<ConvarAttribute>();
+                    if (attribute != null)
+                        return attribute.DevOnly;
+                }
+
+                return true;
+            }
+        }
         #endregion
 
         #region CONSTRUCTORS

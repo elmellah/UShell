@@ -38,6 +38,17 @@ namespace UShell
                 return "";
             }
         }
+        public bool IsDevOnly
+        {
+            get
+            {
+                CmdAttribute attribute = _method.GetCustomAttribute<CmdAttribute>();
+                if (attribute != null)
+                    return attribute.DevOnly;
+
+                return true;
+            }
+        }
 
         private int paramCountMax { get => _parameters.Length; }
         private int paramCountMin
