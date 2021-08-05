@@ -1473,6 +1473,22 @@ namespace UShell
                 else
                     Debug.LogWarning("the file does not exist");
             }
+            else if (args.Length >= 2)
+            {
+                if (args[0] != "-c")
+                    throw new SyntaxException();
+
+                var assembly = Assembly.Load(args[1]);
+                var entryPoint = assembly.EntryPoint;
+                if (entryPoint != null)
+                {
+                    object obj = entryPoint.Invoke(null, null);
+                    if (entryPoint.ReturnType != typeof(void))
+                        Debug.Log("exitcode: " + obj);
+                }
+                else
+                    Debug.LogWarning("no entry point");
+            }
             else
                 throw new SyntaxException();
         }
