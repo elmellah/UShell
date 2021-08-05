@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.CSharp;
+using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -56,6 +58,7 @@ namespace UShell
             "convar",
             "event",
             "reflex",
+            "compile",
         };
         [Convar("converters", "the shell converters", true, false)]
         private static Tuple<Type, Type>[] _converters =
@@ -1257,6 +1260,7 @@ namespace UShell
                 case "convar":      executeConvar(args); break;
                 case "event":       executeEvent(args); break;
                 case "reflex":      executeReflex(args); break;
+                case "compile":     executeCompile(args); break;
             }
         }
 
@@ -1684,6 +1688,87 @@ namespace UShell
             }
             else
                 throw new SyntaxException();
+        }
+        private void executeCompile(string[] arguments)
+        {
+            Option[] availableOptions = new Option[]
+            {
+                new Option('r', true),
+                new Option('o', true),
+                new Option('x', false),
+                new Option('l', false),
+                new Option('d', false),
+                new Option('m', false),
+                new Option('c', true),
+            };
+
+            string[] assemblies = null;
+            string outputAssembly = null;
+            string compilerOptions = null;
+            bool generateInMemory = false;
+            bool generateExecutable = false;
+            string[] fileNames;
+
+            int argIndex = 0;
+            var options = Utils.GetOptions(arguments, availableOptions, out var args);
+            for (int i = 0; i < options.Count; i++)
+            {
+                switch (options[i])
+                {
+                    case 'r':
+                        assemblies = args[argIndex++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        break;
+                    case 'o':
+                        outputAssembly = args[argIndex++];
+                        break;
+                    case 'x':
+                        generateExecutable = true;
+                        break;
+                    case 'l':
+                        generateExecutable = false;
+                        break;
+                    case 'd':
+                        generateInMemory = false;
+                        break;
+                    case 'm':
+                        generateInMemory = true;
+                        break;
+                    case 'c':
+                        compilerOptions = args[argIndex++];
+                        break;
+                    default:
+                        throw new SyntaxException();
+                }
+            }
+
+            fileNames = new string[args.Count - argIndex];
+            for (int i = argIndex, j = 0; i < args.Count; i++, j++)
+                fileNames[j] = args[i];
+
+
+            CSharpCodeProvider provider = new CSharpCodeProvider();
+            CompilerParameters parameters = new CompilerParameters(assemblies)
+            {
+                GenerateInMemory = generateInMemory,
+                GenerateExecutable = generateExecutable,
+                OutputAssembly = outputAssembly,
+                CompilerOptions = compilerOptions,
+            };
+            parameters.ReferencedAssemblies.Add(Assembly.GetAssembly(typeof(UnityEngine.Debug)).Location);
+            parameters.ReferencedAssemblies.Add(Assembly.GetExecutingAssembly().Location);
+
+            CompilerResults results = provider.CompileAssemblyFromFile(parameters, fileNames);
+            if (results.Errors.HasErrors)
+            {
+                string errors = "";
+                foreach (CompilerError error in results.Errors)
+                    errors += string.Format("Error ({0}): {1}", error.ErrorNumber, error.ErrorText) + "\n";
+
+                Debug.LogError(errors);
+                return;
+            }
+
+            Debug.Log(results.PathToAssembly ?? results.CompiledAssembly.GetName().Name);
         }
 
         private void getHelp(StringBuilder strBuilder, ICommand cmd, string label)
