@@ -48,6 +48,41 @@ namespace UShell
         }
     }
 
+    public struct Option
+    {
+        public char Value { get; }
+        public bool ExpectParam { get; }
+
+        public Option(char value)
+        {
+            this.Value = value;
+            this.ExpectParam = false;
+        }
+        public Option(char value, bool expectParam)
+        {
+            this.Value = value;
+            this.ExpectParam = expectParam;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Option option &&
+                   Value == option.Value &&
+                   ExpectParam == option.ExpectParam;
+        }
+        public override int GetHashCode()
+        {
+            int hashCode = -1416359997;
+            hashCode = hashCode * -1521134295 + Value.GetHashCode();
+            hashCode = hashCode * -1521134295 + ExpectParam.GetHashCode();
+            return hashCode;
+        }
+        public override string ToString()
+        {
+            return base.ToString();
+        }
+    }
+
     public static class Utils
     {
         const string parseError = "cannot parse '{0}' to {1}";
@@ -1119,6 +1154,54 @@ namespace UShell
                 args[i] = tokens[i + 1].value;
 
             return args;
+        }
+        public static List<char> GetOptions(string[] fields, Option[] options, out List<string> args)
+        {
+            var result = new List<char>();
+            args = new List<string>();
+
+            int optionIndex = -1;
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (fields[i][0] == '-')
+                {
+                    for (int j = 1; j < fields[i].Length; j++)
+                    {
+                        if (optionIndex > -1 && options[optionIndex].ExpectParam)
+                            throw new Exception("expecting parameter for option " + options[optionIndex]);
+
+                        for (int k = 0; k < options.Length; k++)
+                        {
+                            if (options[k].Value == fields[i][j])
+                            {
+                                optionIndex = k;
+                                break;
+                            }
+                        }
+
+                        if (optionIndex > -1)
+                        {
+                            if (!result.Contains(fields[i][j]))
+                                result.Insert(0, fields[i][j]);
+                            else
+                                throw new Exception("option " + fields[i][j] + " duplicated");
+                        }
+                        else
+                            throw new Exception("invalid option " + fields[i][j]);
+                    }
+                }
+                else
+                {
+                    if (optionIndex > -1 && options[optionIndex].ExpectParam)
+                        args.Insert(0, fields[i]);
+                    else
+                        args.Add(fields[i]);
+
+                    optionIndex = -1;
+                }
+            }
+
+            return result;
         }
         #endregion
     }
