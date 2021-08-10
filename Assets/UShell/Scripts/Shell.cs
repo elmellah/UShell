@@ -1,6 +1,4 @@
-﻿using Microsoft.CSharp;
-using System;
-using System.CodeDom.Compiler;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -1111,7 +1109,12 @@ namespace UShell
                     return new string[] { "name" };
                 case ".":
                 case "source":
-                    return new string[] { "file" };
+                    return new string[]
+                    {
+                        "[-c] file ...",
+                        "file ...",
+                        "-c file ...",
+                    };
                 case "help":
                     return new string[]
                     {
@@ -1190,7 +1193,12 @@ namespace UShell
                     return new string[] { "log the type of a command" };
                 case ".":
                 case "source":
-                    return new string[] { "execute the content of a file as a command line" };
+                    return new string[]
+                    {
+                        "execute Shell or C# code",
+                        "execute the content of files as command lines",
+                        "compile and execute C# code from the specified files",
+                    };
                 case "font":
                     return new string[]
                     {
@@ -1452,45 +1460,72 @@ namespace UShell
             else
                 throw new SyntaxException();
         }
-        private void executeSource(string[] args)
+        private void executeSource(string[] arguments)
         {
-            if (args.Length == 1)
+            Option[] availableOptions = new Option[]
             {
-                string scriptPath = args[0];
-                if (File.Exists(scriptPath))
-                {
-                    try
-                    {
-                        string cmd = File.ReadAllText(scriptPath);
-                        processCmdLine(scriptPath, cmd, false);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError("error while reading '" + scriptPath + "' file");
-                        Debug.LogException(e);
-                    }
-                }
-                else
-                    Debug.LogWarning("the file does not exist");
-            }
-            else if (args.Length >= 2)
-            {
-                if (args[0] != "-c")
-                    throw new SyntaxException();
+                new Option('c', true),
+            };
 
-                var assembly = Assembly.Load(args[1]);
-                var entryPoint = assembly.EntryPoint;
-                if (entryPoint != null)
+            bool isCSharpScript = false;
+
+            var options = Utils.GetOptions(arguments, availableOptions, out var args);
+            for (int i = 0; i < options.Count; i++)
+            {
+                switch (options[i])
                 {
-                    object obj = entryPoint.Invoke(null, null);
-                    if (entryPoint.ReturnType != typeof(void))
-                        Debug.Log("exitcode: " + obj);
+                    case 'c':
+                        isCSharpScript = true;
+                        break;
+                    default:
+                        throw new SyntaxException();
                 }
-                else
-                    Debug.LogWarning("no entry point");
+            }
+
+            if (isCSharpScript)
+            {
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                List<string> assembliesLocations = new List<string>();
+                for (int i = 0; i < assemblies.Length; i++)
+                {
+                    if (!assemblies[i].IsDynamic)
+                        assembliesLocations.Add(assemblies[i].Location);
+                }
+
+                Assembly assembly = Utils.CompileFromFile(null, assembliesLocations.ToArray(), null, true, true, args.ToArray());
+                if (assembly == null)
+                {
+                    Debug.LogError("compilation aborted");
+                    return;
+                }
+
+                var exitcode = Utils.ExecuteAssembly(assembly);
+                if (exitcode != null)
+                    Debug.Log("exitcode: " + (int)exitcode);
             }
             else
-                throw new SyntaxException();
+            {
+                for (int i = 0; i < args.Count; i++)
+                {
+                    string scriptPath = args[i];
+                    if (File.Exists(scriptPath))
+                    {
+                        try
+                        {
+                            string cmd = File.ReadAllText(scriptPath);
+                            processCmdLine(scriptPath, cmd, false);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError("error while reading '" + scriptPath + "' file");
+                            Debug.LogException(e);
+                        }
+                    }
+                    else
+                        Debug.LogWarning("the file does not exist");
+                }
+                
+            }
         }
         private void executeFont(string[] args)
         {
@@ -1707,6 +1742,8 @@ namespace UShell
         }
         private void executeCompile(string[] arguments)
         {
+            Assembly assembly;
+
             Option[] availableOptions = new Option[]
             {
                 new Option('r', true),
@@ -1718,7 +1755,7 @@ namespace UShell
                 new Option('c', true),
             };
 
-            string[] assemblies = null;
+            string[] assemblies = new string[0];
             string outputAssembly = null;
             string compilerOptions = null;
             bool generateInMemory = false;
@@ -1761,30 +1798,16 @@ namespace UShell
             for (int i = argIndex, j = 0; i < args.Count; i++, j++)
                 fileNames[j] = args[i];
 
-
-            CSharpCodeProvider provider = new CSharpCodeProvider();
-            CompilerParameters parameters = new CompilerParameters(assemblies)
+            for (int i = 0; i < assemblies.Length; i++)
             {
-                GenerateInMemory = generateInMemory,
-                GenerateExecutable = generateExecutable,
-                OutputAssembly = outputAssembly,
-                CompilerOptions = compilerOptions,
-            };
-            parameters.ReferencedAssemblies.Add(Assembly.GetAssembly(typeof(UnityEngine.Debug)).Location);
-            parameters.ReferencedAssemblies.Add(Assembly.GetExecutingAssembly().Location);
-
-            CompilerResults results = provider.CompileAssemblyFromFile(parameters, fileNames);
-            if (results.Errors.HasErrors)
-            {
-                string errors = "";
-                foreach (CompilerError error in results.Errors)
-                    errors += string.Format("Error ({0}): {1}", error.ErrorNumber, error.ErrorText) + "\n";
-
-                Debug.LogError(errors);
-                return;
+                assembly = Assembly.Load(assemblies[i]);
+                if (assembly != null && !assembly.IsDynamic)
+                    assemblies[i] = assembly.Location;
             }
 
-            Debug.Log(results.PathToAssembly ?? results.CompiledAssembly.GetName().Name);
+            assembly = Utils.CompileFromFile(outputAssembly, assemblies, compilerOptions, generateInMemory, generateExecutable, fileNames);
+            if (assembly != null)
+                Debug.Log(assembly.Location);
         }
 
         private void getHelp(StringBuilder strBuilder, ICommand cmd, string label)
