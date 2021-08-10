@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.CSharp;
+using System;
+using System.CodeDom.Compiler;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -1204,5 +1206,66 @@ namespace UShell
             return result;
         }
         #endregion
+
+        public static Assembly CompileFromFile(string outputAssembly, string[] references, string compilerOptions, bool generateInMemory, bool generateExecutable, params string[] fileNames)
+        {
+            CSharpCodeProvider provider = new CSharpCodeProvider();
+            CompilerParameters options = new CompilerParameters(references)
+            {
+                GenerateInMemory = generateInMemory,
+                GenerateExecutable = generateExecutable,
+                OutputAssembly = outputAssembly,
+                CompilerOptions = compilerOptions,
+            };
+
+            CompilerResults results = provider.CompileAssemblyFromFile(options, fileNames);
+            if (results.Errors.HasErrors)
+            {
+                string errors = "";
+                foreach (CompilerError error in results.Errors)
+                    errors += string.Format("Error ({0}): {1}", error.ErrorNumber, error.ErrorText) + "\n";
+
+                throw new Exception(errors);
+            }
+
+            return results.CompiledAssembly;
+        }
+        public static int? ExecuteAssembly(Assembly assembly)
+        {
+            return ExecuteAssembly(assembly, new string[0]);
+        }
+        public static int? ExecuteAssembly(Assembly assembly, string[] args)
+        {
+            var entryPoint = assembly.EntryPoint;
+            if (entryPoint == null)
+            {
+                foreach (var type in assembly.GetTypes())
+                {
+                    foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+                    {
+                        if (method.Name == "Main")
+                            entryPoint = method;
+                    }
+                }
+            }
+
+            if (entryPoint == null)
+                throw new Exception("no entry point");
+
+            var parameters = entryPoint.GetParameters();
+            if (parameters.Length > 1)
+                throw new Exception("the entry method must have zero or one parameter");
+            if (entryPoint.ReturnType != typeof(void) && entryPoint.ReturnType != typeof(int))
+                throw new Exception("the entry method must be a procedure or a function returning an int");
+
+            if (parameters.Length == 1)
+            {
+                if (parameters[0].ParameterType != typeof(string[]))
+                    throw new Exception("the entry method must have a parameter of the type string[]");
+            }
+
+            object obj = entryPoint.Invoke(null, new[] { args });
+            return entryPoint.ReturnType == typeof(void) ? null : (int?)obj;
+        }
     }
 }
