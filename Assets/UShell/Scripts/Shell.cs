@@ -1460,7 +1460,7 @@ namespace UShell
             else
                 throw new SyntaxException();
         }
-        private void executeSource(string[] arguments)
+        private async void executeSource(string[] arguments)
         {
             Option[] availableOptions = new Option[]
             {
@@ -1499,7 +1499,7 @@ namespace UShell
                     return;
                 }
 
-                var exitcode = Utils.ExecuteAssembly(assembly);
+                var exitcode = await Utils.ExecuteAssembly(assembly);
                 if (exitcode != null)
                     Debug.Log("exitcode: " + (int)exitcode);
             }

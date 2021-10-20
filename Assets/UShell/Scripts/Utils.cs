@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace UShell
@@ -1230,11 +1231,7 @@ namespace UShell
 
             return results.CompiledAssembly;
         }
-        public static int? ExecuteAssembly(Assembly assembly)
-        {
-            return ExecuteAssembly(assembly, new string[0]);
-        }
-        public static int? ExecuteAssembly(Assembly assembly, string[] args)
+        public static async Task<int?> ExecuteAssembly(Assembly assembly, string[] args = null)
         {
             var entryPoint = assembly.EntryPoint;
             if (entryPoint == null)
@@ -1264,7 +1261,13 @@ namespace UShell
                     throw new Exception("the entry method must have a parameter of the type string[]");
             }
 
-            object obj = entryPoint.Invoke(null, new[] { args });
+            object obj;
+            object[] @params = parameters.Length == 0 ? null : new[] { args ?? new string[0] };
+            if (entryPoint.IsAwaitable())
+                obj = await (dynamic)entryPoint.Invoke(null, @params);
+            else
+                obj = await Task.FromResult(entryPoint.Invoke(null, @params));
+
             return entryPoint.ReturnType == typeof(void) ? null : (int?)obj;
         }
     }
