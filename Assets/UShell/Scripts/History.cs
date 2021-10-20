@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace UShell
 {
+    [Serializable]
     public class History
     {
         #region FIELDS

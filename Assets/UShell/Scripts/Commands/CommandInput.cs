@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UShell.Commands
 {
-    public class CommandInput : MonoBehaviour, ICommand
+    public class CommandInput : HotBehaviour, ICommand
     {
         #region FIELDS
         private static CommandInput _instance;
@@ -22,6 +22,8 @@ namespace UShell.Commands
         #region MESSAGES
         void Awake()
         {
+            base.__Awake();
+
             if (_instance != null)
             {
                 Destroy(this.gameObject);
@@ -37,18 +39,28 @@ namespace UShell.Commands
             Shell.Main.RegisterCmd("bind", this, false);
             Shell.Main.RegisterCmd("unbind", this, false);
 
-            _keyCodes = new List<KeyCode>();
-            _commands = new List<string>();
-
-            if (_defaultKeyCodes != null && _defaultCommands != null)
+            if (!IsHotReload)
             {
-                int length = Mathf.Min(_defaultKeyCodes.Length, _defaultCommands.Length);
-                for (int i = 0; i < length; i++)
+                _keyCodes = new List<KeyCode>();
+                _commands = new List<string>();
+
+                if (_defaultKeyCodes != null && _defaultCommands != null)
                 {
-                    _keyCodes.Add(_defaultKeyCodes[i]);
-                    _commands.Add(_defaultCommands[i]);
+                    int length = Mathf.Min(_defaultKeyCodes.Length, _defaultCommands.Length);
+                    for (int i = 0; i < length; i++)
+                    {
+                        _keyCodes.Add(_defaultKeyCodes[i]);
+                        _commands.Add(_defaultCommands[i]);
+                    }
                 }
             }
+        }
+        void OnEnable()
+        {
+            base.__CallAwakeIfHotReload();
+
+
+            base.__CallStartIfHotReload();
         }
         void Update()
         {

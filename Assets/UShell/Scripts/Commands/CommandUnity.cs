@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 
 namespace UShell.Commands
 {
-    public class CommandUnity : MonoBehaviour, ICommand
+    public class CommandUnity : HotBehaviour, ICommand
     {
         #region FIELDS
         private static CommandUnity _instance;
@@ -39,6 +39,8 @@ namespace UShell.Commands
         #region MESSAGES
         void Awake()
         {
+            base.__Awake();
+
             if (_instance != null)
             {
                 Destroy(this.gameObject);
@@ -70,6 +72,13 @@ namespace UShell.Commands
             Shell.Main.RegisterCmd("restart",        this, false);
 
             _lastTime = DateTime.Now;
+        }
+        void OnEnable()
+        {
+            base.__CallAwakeIfHotReload();
+
+
+            base.__CallStartIfHotReload();
         }
         void Update()
         {

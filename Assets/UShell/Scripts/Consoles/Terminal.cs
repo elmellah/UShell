@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace UShell.Consoles
 {
-    public class Terminal : MonoBehaviour, IConsole
+    public class Terminal : HotBehaviour, IConsole
     {
         #region FIELDS
         [Header("OPTIONS")]
@@ -485,6 +485,21 @@ namespace UShell.Consoles
                 Shell.Main.ProcessCmdLine("$", cmd);
             }
         }
+        #endregion
+
+        #region HOT RELOAD
+#if UNITY_EDITOR
+        private string _strBuilder_value;
+
+        public override void OnBeforeSerialize()
+        {
+            _strBuilder_value = _strBuilder.ToString();
+        }
+        public override void OnAfterDeserialize()
+        {
+            _strBuilder = new StringBuilder(_strBuilder_value);
+        }
+#endif
         #endregion
     }
 }

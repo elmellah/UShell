@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 
 namespace UShell
 {
-    public class Shell : MonoBehaviour, ICommand
+    public class Shell : HotBehaviour, ICommand
     {
         #region FIELDS
         private static Shell _sh;
@@ -167,6 +167,8 @@ namespace UShell
         #region MESSAGES
         void Awake()
         {
+            base.__Awake();
+
             //Singleton
             if (_sh != null)
             {
@@ -179,7 +181,7 @@ namespace UShell
             else
                 _sh = this;
 
-            if (_dontDestroyOnLoad)
+            if (!IsHotReload && _dontDestroyOnLoad)
             {
                 if (this.transform.parent != null)
                     this.transform.SetParent(null);
@@ -188,16 +190,23 @@ namespace UShell
 
             Stopwatch watch = Stopwatch.StartNew();
 
-            _isHeadless = Application.isBatchMode;
+            if (!IsHotReload)
+                _isHeadless = Application.isBatchMode;
 
             //Cmd History initialization
-            _history = new History(_historySize, _playerPrefsKeysPrefix + "_history");
-            _history.LoadFromDisk();
+            if (!IsHotReload)
+            {
+                _history = new History(_historySize, _playerPrefsKeysPrefix + "_history");
+                _history.LoadFromDisk();
+            }
 
             //Default Aliases registration
-            int count = Mathf.Min(_defaultAliasKeys.Length, _defaultAliasValues.Length);
-            for (int i = 0; i < count; i++)
-                _aliases.Add(_defaultAliasKeys[i], _defaultAliasValues[i]);
+            if (!IsHotReload)
+            {
+                int count = Mathf.Min(_defaultAliasKeys.Length, _defaultAliasValues.Length);
+                for (int i = 0; i < count; i++)
+                    _aliases.Add(_defaultAliasKeys[i], _defaultAliasValues[i]);
+            }
 
             //Builtin Cmds registration
             for (int i = 0; i < _builtinLabels.Length; i++)
@@ -217,7 +226,7 @@ namespace UShell
         }
         void Start()
         {
-            if (_sh != this)
+            if (IsHotReload || _sh != this)
                 return;
 
 
@@ -267,6 +276,8 @@ namespace UShell
 
         void OnEnable()
         {
+            base.__CallAwakeIfHotReload();
+
             if (_sh != this)
                 return;
 
@@ -288,6 +299,8 @@ namespace UShell
                 Debug.LogError("shell: error while reading command line argument \"-shid\"");
                 Debug.LogException(e);
             }
+
+            base.__CallStartIfHotReload();
         }
         void OnDisable()
         {
@@ -1849,6 +1862,33 @@ namespace UShell
             }
         }
         #endregion
+        #endregion
+
+        #region HOT RELOAD
+#if UNITY_EDITOR
+        private List<string> _aliases_keys = new List<string>();
+        private List<string> _aliases_values = new List<string>();
+
+        public override void OnBeforeSerialize()
+        {
+            _aliases_keys.Clear();
+            _aliases_values.Clear();
+
+            foreach (var kvp in _aliases)
+            {
+                _aliases_keys.Add(kvp.Key);
+                _aliases_values.Add(kvp.Value);
+            }
+        }
+        public override void OnAfterDeserialize()
+        {
+            _aliases = new Dictionary<string, string>();
+
+            int count = Mathf.Min(_aliases_keys.Count, _aliases_values.Count);
+            for (int i = 0; i != count; i++)
+                _aliases.Add(_aliases_keys[i], _aliases_values[i]);
+        }
+#endif
         #endregion
     }
 }

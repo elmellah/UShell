@@ -12,7 +12,7 @@ using UnityEditor.Callbacks;
 
 namespace UShell.Consoles
 {
-    public class Pipeline : MonoBehaviour, IConsole
+    public class Pipeline : HotBehaviour, IConsole
     {
         public class PipeIn
         {
@@ -197,10 +197,6 @@ namespace UShell.Consoles
         }
 
         #region FIELDS
-#if UNITY_EDITOR && SHELL_EXTERNAL_SCRIPTS
-        private const string _bashScriptsFolder = "Linux Scripts";
-        private const string _powerShellScriptsFolder = "Windows Scripts";
-#endif
         private static readonly string _pipeInName = ".consin";
         private static readonly string _pipeOutName = ".consout";
 
@@ -214,6 +210,8 @@ namespace UShell.Consoles
         #region MESSAGES
         void Awake()
         {
+            base.__Awake();
+
             _pipeIn = new PipeIn();
             _pipeOut = new PipeOut();
 
@@ -228,7 +226,11 @@ namespace UShell.Consoles
 
         void OnEnable()
         {
+            base.__CallAwakeIfHotReload();
+
             Shell.Main.RegisterConsole("|", this);
+
+            base.__CallStartIfHotReload();
         }
         void OnDisable()
         {
@@ -237,44 +239,9 @@ namespace UShell.Consoles
             _pipeIn.Close();
             _pipeOut.Close();
         }
-#endregion
+        #endregion
 
-#region METHODS
-#if UNITY_EDITOR && SHELL_EXTERNAL_SCRIPTS
-        [PostProcessBuild]
-        public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
-        {
-            string buildFolder = Path.GetDirectoryName(pathToBuiltProject);
-            string exeName = Path.GetFileName(pathToBuiltProject);
-
-            if (target == BuildTarget.StandaloneLinux64)
-            {
-                TextAsset[] textAssets = Resources.LoadAll<TextAsset>(_bashScriptsFolder);
-                for (int i = 0; i < textAssets.Length; i++)
-                {
-                    string text = textAssets[i].ToString();
-                    text = text.Replace("{{EXENAME}}", exeName);
-                    text = text.Replace("{{PIPEOUT}}", _pipeOutName);
-                    text = text.Replace("{{PIPEIN}}", _pipeInName);
-                    File.WriteAllText(buildFolder + "/" + textAssets[i].name, text);
-                }
-            }
-
-            if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)
-            {
-                TextAsset[] textAssets = Resources.LoadAll<TextAsset>(_powerShellScriptsFolder);
-                for (int i = 0; i < textAssets.Length; i++)
-                {
-                    string text = textAssets[i].ToString();
-                    text = text.Replace("{{EXENAME}}", exeName);
-                    text = text.Replace("{{PIPEOUT}}", _pipeOutName);
-                    text = text.Replace("{{PIPEIN}}", _pipeInName);
-                    File.WriteAllText(buildFolder + "/" + textAssets[i].name, text);
-                }
-            }
-        }
-#endif
-
+        #region METHODS
         public void Init(bool headless) {}
         public void AddLog(Log log)
         {
@@ -341,6 +308,46 @@ namespace UShell.Consoles
 
             return false;
         }
-#endregion
+        #endregion
+
+        #region EDITOR
+#if UNITY_EDITOR && SHELL_EXTERNAL_SCRIPTS
+        private const string _bashScriptsFolder = "Linux Scripts";
+        private const string _powerShellScriptsFolder = "Windows Scripts";
+
+        [PostProcessBuild]
+        public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
+        {
+            string buildFolder = Path.GetDirectoryName(pathToBuiltProject);
+            string exeName = Path.GetFileName(pathToBuiltProject);
+
+            if (target == BuildTarget.StandaloneLinux64)
+            {
+                TextAsset[] textAssets = Resources.LoadAll<TextAsset>(_bashScriptsFolder);
+                for (int i = 0; i < textAssets.Length; i++)
+                {
+                    string text = textAssets[i].ToString();
+                    text = text.Replace("{{EXENAME}}", exeName);
+                    text = text.Replace("{{PIPEOUT}}", _pipeOutName);
+                    text = text.Replace("{{PIPEIN}}", _pipeInName);
+                    File.WriteAllText(buildFolder + "/" + textAssets[i].name, text);
+                }
+            }
+
+            if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)
+            {
+                TextAsset[] textAssets = Resources.LoadAll<TextAsset>(_powerShellScriptsFolder);
+                for (int i = 0; i < textAssets.Length; i++)
+                {
+                    string text = textAssets[i].ToString();
+                    text = text.Replace("{{EXENAME}}", exeName);
+                    text = text.Replace("{{PIPEOUT}}", _pipeOutName);
+                    text = text.Replace("{{PIPEIN}}", _pipeInName);
+                    File.WriteAllText(buildFolder + "/" + textAssets[i].name, text);
+                }
+            }
+        }
+#endif
+        #endregion
     }
 }
