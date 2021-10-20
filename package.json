@@ -6,7 +6,7 @@
   "keywords": [
     "unity"
   ],
-  "description": "Command Line Interpreter for Unity",
+  "description": "Command Line Interpreter for Unity.",
   "dependencies": {
     "com.unity.ugui": "1.0.0"
   }
