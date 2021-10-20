@@ -1,0 +1,14 @@
+{
+  "name": "com.elmellah.ushell",
+  "displayName": "UShell",
+  "version": "0.1",
+  "unity": "2020.3",
+  "keywords": [
+    "unity"
+  ],
+  "description": "Command Line Interpreter for Unity",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  }
+  "category": "Unity"
+}
