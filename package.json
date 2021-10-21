@@ -1,13 +1,23 @@
 {
-  "name": "com.elmellah.ushell",
+  "name": "fr.elmellah.ushell",
+  "version": "0.0.3",
+  "description": "Command Line Interpreter for Unity",
   "displayName": "UShell",
-  "version": "0.0.2",
   "unity": "2020.3",
+  "author": {
+    "name": "Melik El Mellah",
+    "email": "melik.elmellah@gmail.com",
+    "url": "http://melik-elmellah.fr"
+  },
+  "changelogUrl": "https://github.com/elmellah/UShell/commits/master",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  },
+  "documentationUrl": "https://github.com/elmellah/UShell/wiki",
+  "hideInEditor": "false",
   "keywords": [
     "unity"
   ],
-  "description": "Command Line Interpreter for Unity.",
-  "dependencies": {
-    "com.unity.ugui": "1.0.0"
-  }
+  "license": "See LICENSE.md file",
+  "licensesUrl": "https://github.com/elmellah/UShell/blob/master/LICENSE.md"
 }
