@@ -121,7 +121,9 @@ namespace UShell
         private Dictionary<Type, List<object>> _instances = new Dictionary<Type, List<object>>();
         private Dictionary<string, string> _variables = new Dictionary<string, string>();
 
+#if !UNITY_WEBGL
         private AssemblyBuilder _eventsAssemblyBuilder;
+#endif
 
         [Convar("headless", "is the current process running in batchmode?", true, false)]
         private bool _isHeadless = false;
@@ -219,8 +221,10 @@ namespace UShell
             findAndRegisterMembers();
             RegisterInstance(this);
 
+#if !UNITY_WEBGL
             //Create the assembly for the events
             _eventsAssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("UShellEventsAssembly"), AssemblyBuilderAccess.Run);
+#endif
 
             Debug.Log("shell: initialized in " + watch.ElapsedMilliseconds + "ms");
         }
@@ -454,14 +458,13 @@ namespace UShell
             {
                 if (executingTypes[i] == typeof(Shell))
                 {
-                    Type tmp = executingTypes[i];
-                    executingTypes[i] = executingTypes[0];
-                    executingTypes[0] = tmp;
+                    executingTypes[i] = null;
                     break;
                 }
             }
-
+            registerMembersFromTypes(new Type[] { typeof(Shell) });
             registerMembersFromTypes(executingTypes);
+
             for (int i = 1; i < assemblies.Length; i++)
             {
                 bool isException = false;
@@ -483,6 +486,9 @@ namespace UShell
         {
             for (int i = 0; i < types.Length; i++)
             {
+                if (types[i] == null)
+                    continue;
+
                 FieldInfo[] fields = types[i].GetFields(_bindingFlags);
                 for (int j = 0; j < fields.Length; j++)
                     if (Attribute.IsDefined(fields[j], typeof(ConvarAttribute), false))
@@ -1712,9 +1718,11 @@ namespace UShell
                             Debug.LogWarning(args[1] + ": unknown event");
                         break;
                     default:
+#if !UNITY_WEBGL
                         if (_events.TryGetValue(args[0], out @event))
                             @event.AddEventHandler(args[1], _eventsAssemblyBuilder, _instances);
                         else
+#endif
                             Debug.LogWarning(args[0] + ": unknown event");
                         break;
                 }

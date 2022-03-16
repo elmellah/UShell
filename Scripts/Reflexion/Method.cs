@@ -111,10 +111,12 @@ namespace UShell
             }
 
             object result;
+#if !UNITY_WEBGL
             if (_method.IsAwaitable())
                 result = await (dynamic)_method.Invoke(obj, args);
             else
-                result = await Task.FromResult(_method.Invoke(obj, args));
+#endif
+            result = await Task.FromResult(_method.Invoke(obj, args));
 
             for (int i = 0; i < providedArgs.Length; i++)
                 providedArgs[i] = args[i];

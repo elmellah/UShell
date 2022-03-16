@@ -83,6 +83,7 @@ namespace UShell
         #endregion
 
         #region METHODS
+#if !UNITY_WEBGL
         public void AddEventHandler(string cmdLine, AssemblyBuilder assemblyBuilder, Dictionary<Type, List<object>> instances)
         {
             ModuleBuilder mb = assemblyBuilder.DefineDynamicModule(this.Name + "_" + Environment.TickCount); //Environment.TickCount: the module name must be unique
@@ -141,6 +142,7 @@ namespace UShell
                 }
             }
         }
+#endif
         public void RemoveAllEventHandlers()
         {
             foreach (var e in _targetsAndHandlers)

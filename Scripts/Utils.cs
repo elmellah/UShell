@@ -1210,6 +1210,7 @@ namespace UShell
 
         public static Assembly CompileFromFile(string outputAssembly, string[] references, string compilerOptions, bool generateInMemory, bool generateExecutable, params string[] fileNames)
         {
+#if !UNITY_WEBGL
             CSharpCodeProvider provider = new CSharpCodeProvider();
             CompilerParameters options = new CompilerParameters(references)
             {
@@ -1230,6 +1231,9 @@ namespace UShell
             }
 
             return results.CompiledAssembly;
+#else
+            return null;
+#endif
         }
         public static async Task<int?> ExecuteAssembly(Assembly assembly, string[] args = null)
         {
@@ -1263,10 +1267,12 @@ namespace UShell
 
             object obj;
             object[] @params = parameters.Length == 0 ? null : new[] { args ?? new string[0] };
+#if !UNITY_WEBGL
             if (entryPoint.IsAwaitable())
                 obj = await (dynamic)entryPoint.Invoke(null, @params);
             else
-                obj = await Task.FromResult(entryPoint.Invoke(null, @params));
+#endif
+            obj = await Task.FromResult(entryPoint.Invoke(null, @params));
 
             return entryPoint.ReturnType == typeof(void) ? null : (int?)obj;
         }
