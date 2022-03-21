@@ -12,7 +12,7 @@ using UnityEditor.Callbacks;
 
 namespace UShell.Consoles
 {
-    public class Pipeline : HotBehaviour, IConsole
+    public class Pipeline : MonoBehaviour, IConsole
     {
         public class PipeIn
         {
@@ -210,7 +210,7 @@ namespace UShell.Consoles
         #region MESSAGES
         void Awake()
         {
-            base.__Awake();
+            HotReload.Register(this);
 
             _pipeIn = new PipeIn();
             _pipeOut = new PipeOut();
@@ -226,11 +226,10 @@ namespace UShell.Consoles
 
         void OnEnable()
         {
-            base.__CallAwakeIfHotReload();
+            if (!HotReload.ExecuteOnEnable)
+                return;
 
             Shell.Main.RegisterConsole("|", this);
-
-            base.__CallStartIfHotReload();
         }
         void OnDisable()
         {

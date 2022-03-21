@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UShell.Commands
 {
-    public class CommandInput : HotBehaviour, ICommand
+    public class CommandInput : MonoBehaviour, ICommand
     {
         #region FIELDS
         private static CommandInput _instance;
@@ -22,7 +22,7 @@ namespace UShell.Commands
         #region MESSAGES
         void Awake()
         {
-            base.__Awake();
+            HotReload.Register(this);
 
             if (_instance != null)
             {
@@ -39,7 +39,7 @@ namespace UShell.Commands
             Shell.Main.RegisterCmd("bind", this, false);
             Shell.Main.RegisterCmd("unbind", this, false);
 
-            if (!IsHotReload)
+            if (!HotReload.IsHotReload)
             {
                 _keyCodes = new List<KeyCode>();
                 _commands = new List<string>();
@@ -57,10 +57,8 @@ namespace UShell.Commands
         }
         void OnEnable()
         {
-            base.__CallAwakeIfHotReload();
-
-
-            base.__CallStartIfHotReload();
+            if (!HotReload.ExecuteOnEnable)
+                return;
         }
         void Update()
         {

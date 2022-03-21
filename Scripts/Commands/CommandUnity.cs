@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 
 namespace UShell.Commands
 {
-    public class CommandUnity : HotBehaviour, ICommand
+    public class CommandUnity : MonoBehaviour, ICommand
     {
         #region FIELDS
         private static CommandUnity _instance;
@@ -39,7 +39,7 @@ namespace UShell.Commands
         #region MESSAGES
         void Awake()
         {
-            base.__Awake();
+            HotReload.Register(this);
 
             if (_instance != null)
             {
@@ -75,10 +75,8 @@ namespace UShell.Commands
         }
         void OnEnable()
         {
-            base.__CallAwakeIfHotReload();
-
-
-            base.__CallStartIfHotReload();
+            if (!HotReload.ExecuteOnEnable)
+                return;
         }
         void Update()
         {

@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 
 namespace UShell
 {
-    public class Shell : HotBehaviour, ICommand
+    public class Shell : MonoBehaviour, ICommand, ISerializationCallbackReceiver
     {
         #region FIELDS
         private static Shell _sh;
@@ -169,7 +169,7 @@ namespace UShell
         #region MESSAGES
         void Awake()
         {
-            base.__Awake();
+            HotReload.Register(this);
 
             //Singleton
             if (_sh != null)
@@ -183,7 +183,7 @@ namespace UShell
             else
                 _sh = this;
 
-            if (!IsHotReload && _dontDestroyOnLoad)
+            if (!HotReload.IsHotReload && _dontDestroyOnLoad)
             {
                 if (this.transform.parent != null)
                     this.transform.SetParent(null);
@@ -192,18 +192,18 @@ namespace UShell
 
             Stopwatch watch = Stopwatch.StartNew();
 
-            if (!IsHotReload)
+            if (!HotReload.IsHotReload)
                 _isHeadless = Application.isBatchMode;
 
             //Cmd History initialization
-            if (!IsHotReload)
+            if (!HotReload.IsHotReload)
             {
                 _history = new History(_historySize, _playerPrefsKeysPrefix + "_history");
                 _history.LoadFromDisk();
             }
 
             //Default Aliases registration
-            if (!IsHotReload)
+            if (!HotReload.IsHotReload)
             {
                 int count = Mathf.Min(_defaultAliasKeys.Length, _defaultAliasValues.Length);
                 for (int i = 0; i < count; i++)
@@ -230,7 +230,7 @@ namespace UShell
         }
         void Start()
         {
-            if (IsHotReload || _sh != this)
+            if (_sh != this)
                 return;
 
 
@@ -280,7 +280,8 @@ namespace UShell
 
         void OnEnable()
         {
-            base.__CallAwakeIfHotReload();
+            if (!HotReload.ExecuteOnEnable)
+                return;
 
             if (_sh != this)
                 return;
@@ -303,8 +304,6 @@ namespace UShell
                 Debug.LogError("shell: error while reading command line argument \"-shid\"");
                 Debug.LogException(e);
             }
-
-            base.__CallStartIfHotReload();
         }
         void OnDisable()
         {
@@ -1877,7 +1876,7 @@ namespace UShell
         private List<string> _aliases_keys = new List<string>();
         private List<string> _aliases_values = new List<string>();
 
-        public override void OnBeforeSerialize()
+        void ISerializationCallbackReceiver.OnBeforeSerialize()
         {
             _aliases_keys.Clear();
             _aliases_values.Clear();
@@ -1888,7 +1887,7 @@ namespace UShell
                 _aliases_values.Add(kvp.Value);
             }
         }
-        public override void OnAfterDeserialize()
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
         {
             _aliases = new Dictionary<string, string>();
 
@@ -1896,6 +1895,9 @@ namespace UShell
             for (int i = 0; i != count; i++)
                 _aliases.Add(_aliases_keys[i], _aliases_values[i]);
         }
+#else
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+        void ISerializationCallbackReceiver.OnAfterDeserialize() { }
 #endif
         #endregion
     }

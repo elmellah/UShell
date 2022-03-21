@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace UShell.Consoles
 {
-    public class Terminal : HotBehaviour, IConsole
+    public class Terminal : MonoBehaviour, IConsole, ISerializationCallbackReceiver
     {
         #region FIELDS
         [Header("OPTIONS")]
@@ -65,6 +65,10 @@ namespace UShell.Consoles
         #region MESSAGES
         void Awake()
         {
+            HotReload.Register(this);
+            if (HotReload.IsHotReload)
+                return;
+
             _strBuilder = new StringBuilder();
 
             _strColorAssert = ColorUtility.ToHtmlStringRGBA(_assertColor);
@@ -79,6 +83,9 @@ namespace UShell.Consoles
 
         void OnEnable()
         {
+            if (!HotReload.ExecuteOnEnable)
+                return;
+
             Shell.Main.RegisterConsole("$", this);
         }
         void OnDisable()
@@ -491,14 +498,17 @@ namespace UShell.Consoles
 #if UNITY_EDITOR
         private string _strBuilder_value;
 
-        public override void OnBeforeSerialize()
+        void ISerializationCallbackReceiver.OnBeforeSerialize()
         {
             _strBuilder_value = _strBuilder.ToString();
         }
-        public override void OnAfterDeserialize()
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
         {
             _strBuilder = new StringBuilder(_strBuilder_value);
         }
+#else
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+        void ISerializationCallbackReceiver.OnAfterDeserialize() { }
 #endif
         #endregion
     }
