@@ -12,7 +12,7 @@ public class HotReload : MonoBehaviour
     private const string _gameObjectName = "Hot Reload";
 
     private static HotReload _instance;
-    protected static bool _hotReload = true;
+    private static bool _hotReload = true;
 
     [NonSerialized]
     private bool _enabled = false;
@@ -36,8 +36,8 @@ public class HotReload : MonoBehaviour
         }
     }
 
-    public static bool ExecuteOnEnable { get => !_hotReload || main._executeOnEnable; }
-    public static bool IsHotReload { get => _hotReload; }
+    public static bool ExecuteOnEnable => !_hotReload || main._executeOnEnable;
+    public static bool IsHotReload => _hotReload;
     #endregion
 
     #region MESSAGES
@@ -55,26 +55,20 @@ public class HotReload : MonoBehaviour
         _executeOnEnable = true;
         for (int i = _behaviours.Count - 1; i >= 0; i--)
         {
-            var b = _behaviours[i];
-            if (b == null)
-            {
-                _behaviours.RemoveAt(i);
+            if (removeIfNull(i))
                 continue;
-            }
 
+            var b = _behaviours[i];
             call(b, "Awake");
             call(b, "OnEnable");
         }
 
         for (int i = _behaviours.Count - 1; i >= 0; i--)
         {
-            var b = _behaviours[i];
-            if (b == null)
-            {
-                _behaviours.RemoveAt(i);
+            if (removeIfNull(i))
                 continue;
-            }
 
+            var b = _behaviours[i];
             call(b, "Start");
         }
         _executeOnEnable = false;
@@ -94,6 +88,16 @@ public class HotReload : MonoBehaviour
     {
         var method = obj.GetType().GetMethod(methodName, _bindingFlags, null, new Type[0], null);
         method?.Invoke(obj, null);
+    }
+    private bool removeIfNull(int behaviourIndex)
+    {
+        if (_behaviours[behaviourIndex] == null)
+        {
+            _behaviours.RemoveAt(behaviourIndex);
+            return true;
+        }
+
+        return false;
     }
     #endregion
 
