@@ -1,13 +1,13 @@
 {
   "name": "fr.elmellah.ushell",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "description": "Command Line Interpreter for Unity",
   "displayName": "UShell",
   "unity": "2020.3",
   "author": {
     "name": "Melik El Mellah",
     "email": "melik.elmellah@gmail.com",
-    "url": "http://melik-elmellah.fr"
+    "url": "https://melik-elmellah.fr"
   },
   "changelogUrl": "https://github.com/elmellah/UShell/commits/master",
   "dependencies": {
