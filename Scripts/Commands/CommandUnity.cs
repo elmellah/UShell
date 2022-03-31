@@ -596,10 +596,7 @@ namespace UShell.Commands
 
                 AudioClip.Destroy(_generatedClip);
                 _generatedClip = generateAudioClip("beep", (int)(44100 * duration), 44100, soundFrequency);
-                _beepSource.clip = _generatedClip;
-
-                _beepSource.Stop();
-                _beepSource.Play();
+                _beepSource.PlayOneShot(_generatedClip);
             }
             else
                 throw new SyntaxException();
